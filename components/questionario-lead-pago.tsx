@@ -17,11 +17,11 @@ interface Question {
   id: string
   type: "text" | "email" | "radio" | "textarea" | "number" | "checkbox"
   label?: string
-  textInitial?: string // Para perguntas com texto dividido
-  textHighlight?: string // Para perguntas com texto dividido
-  textInitial2?: string // Para texto adicional após o highlight
+  textInitial?: string
+  textHighlight?: string
+  textInitial2?: string
   placeholder?: string
-  options?: string[] | { text: string; image?: string }[] // Atualizado para permitir objetos com imagem
+  options?: string[] | { text: string; image?: string }[]
   icon?: React.ElementType
   optional?: boolean
   min?: number
@@ -75,7 +75,7 @@ function isValidEmail(email: string): boolean {
 }
 
 const questions: Question[] = [
-  // Q1: Em qual fase você está? (Climatério - Tipo da respostas "De tempos em tempos")
+  // Q1: Em qual fase você está?
   {
     id: "fase_menopausa",
     type: "radio",
@@ -158,7 +158,7 @@ const questions: Question[] = [
     options: ["É prioridade máxima", "Quero resolver em breve", "Posso esperar mais um pouco"],
     emoji: "⚡",
   },
-  // Q9: Que tipo de ajuda você já tentou? (This was Q10 in previous version, now Q8)
+  // Q9: Que tipo de ajuda você já tentou?
   {
     id: "fez_reposicao_hormonal",
     type: "radio",
@@ -201,7 +201,7 @@ const questions: Question[] = [
     ],
     emoji: "💕",
   },
-  // Q10: O que fez você se inscrever para o evento? (This was Q11 in previous version, now Q10)
+  // Q10: O que fez você se inscrever para o evento?
   {
     id: "motivo_inscricao_evento",
     type: "radio", // Mudado de "checkbox" para "radio"
@@ -214,7 +214,7 @@ const questions: Question[] = [
     ],
     emoji: "📝",
   },
-  // Q11: Você estaria disposta a investir para resolver esse problema? Personalizado, parcela de 99, vou seguir sozinha) (This was Q12 in previous version, now Q11)
+  // Q11: Você estaria disposta a investir para resolver esse problema?
   {
     id: "valor_disposto_pagar",
     type: "radio",
@@ -228,7 +228,7 @@ const questions: Question[] = [
     ],
     emoji: "💸",
   },
-  // Q12: Você já investiu online (This was Q13 in previous version, now Q12)
+  // Q12: Você já investiu online
   {
     id: "compra_online_experiencia",
     type: "radio",
@@ -238,7 +238,7 @@ const questions: Question[] = [
     options: ["Sim, muitas vezes", "Sim, poucas vezes", "Não"],
     emoji: "🛒",
   },
-  // Q13: Você já conhecia a Dra. Giovana/Menopausa Cancelada? (This was Q14 in previous version, now Q13)
+  // Q13: Você já conhecia a Dra. Giovana/Menopausa Cancelada?
   {
     id: "ja_conhecia",
     type: "radio",
@@ -253,7 +253,7 @@ const questions: Question[] = [
       "Não conhecia",
     ],
   },
-  // Q14: Renda (Desempregada, 1 a 2, 3 a 4, prefiro não informar (This was Q16 in previous version, now Q14)
+  // Q14: Renda
   {
     id: "renda_mensal",
     type: "radio",
@@ -268,7 +268,7 @@ const questions: Question[] = [
     ],
     emoji: "💰",
   },
-  // Q15: Estado? (This was Q17 in previous version, now Q15)
+  // Q15: Estado?
   {
     id: "estado_residencia",
     type: "radio",
@@ -277,7 +277,7 @@ const questions: Question[] = [
     options: ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"],
     emoji: "📍",
   },
-  // Q16: Idade? (This was Q18 in previous version, now Q16)
+  // Q16: Idade?
   {
     id: "idade_faixa",
     type: "radio",
@@ -552,108 +552,7 @@ function calculateQuestionPoints(questionId: string, answer: string | string[]):
   return pointsMap[questionId]?.[answer as string] || 1
 }
 
-// Função para gerar o conteúdo do Bloco 1: Análise do Seu Caso
-const symptomDetailsMap: Record<string, { emoji: string; urgency: "alta" | "media" | "baixa"; explanation: string }> = {
-  "Ansiedade ou Depressão": {
-    emoji: "🔥",
-    urgency: "alta",
-    explanation:
-      "A ansiedade e depressão podem desequilibrar seu bem-estar emocional e social, exigindo atenção para restaurar a calma e a qualidade de vida. Isso pode levar a problemas de relacionamento e dificuldades no trabalho.",
-  },
-  "Insônia ou sono ruim": {
-    emoji: "🚨",
-    urgency: "alta",
-    explanation:
-      "A insônia crônica afeta sua energia, concentração e humor, comprometendo a saúde geral e a capacidade de lidar com o dia a dia. A falta de sono reparador pode agravar outros sintomas e impactar sua produtividade.",
-  },
-  "Dores articulares": {
-    emoji: "⚠️",
-    urgency: "media",
-    explanation:
-      "Dores nas articulações podem limitar sua mobilidade e atividades diárias, impactando sua qualidade de vida e bem-estar físico. Ignorar essas dores pode levar a um agravamento e perda de flexibilidade.",
-  },
-  "Cansaço constante": {
-    emoji: "🔥",
-    urgency: "alta",
-    explanation:
-      "O cansaço persistente drena sua vitalidade, dificultando a realização de tarefas e a manutenção de um estilo de vida ativo e produtivo. Pode ser um sinal de desequilíbrios hormonais que precisam de atenção.",
-  },
-  "Queda de cabelo / pele seca / unhas fracas": {
-    emoji: "⚠️",
-    urgency: "media",
-    explanation:
-      "Esses sintomas afetam sua autoestima e aparência, indicando desequilíbrios que podem ser tratados para restaurar a vitalidade. A saúde da pele, cabelo e unhas reflete seu bem-estar interno.",
-  },
-  "Dificuldade para emagrecer": {
-    emoji: "⚠️",
-    urgency: "media",
-    explanation:
-      "A dificuldade em perder peso pode impactar sua saúde metabólica e bem-estar, exigindo estratégias eficazes para alcançar seus objetivos. Pode estar ligada a alterações hormonais que dificultam o metabolismo.",
-  },
-  "Falta de memória": {
-    emoji: "🚨",
-    urgency: "alta",
-    explanation:
-      "Problemas de concentração e memória afetam sua produtividade e clareza mental, exigindo foco para restaurar a função cognitiva. Isso pode impactar sua vida profissional e pessoal, gerando frustração.",
-  },
-  "Fogachos (calorões)": {
-    emoji: "🥵",
-    urgency: "alta",
-    explanation:
-      "Os fogachos frequentes causam desconforto intenso e interrupções no sono, impactando significativamente sua qualidade de vida e bem-estar diário. Eles podem ser exaustivos e constrangedores, exigindo uma solução eficaz.",
-  },
-  "Diminuição da libido": {
-    emoji: "💔",
-    urgency: "media",
-    explanation:
-      "A baixa libido pode afetar a intimidade e a satisfação pessoal, sendo um sintoma que merece atenção para restaurar o equilíbrio. Isso pode gerar tensões em relacionamentos e impactar a autoestima.",
-  },
-  "Nenhum desses": {
-    emoji: "✅",
-    urgency: "baixa",
-    explanation: "Ótimo! Você não relatou nenhum desses sintomas. Continue monitorando sua saúde e bem-estar.",
-  },
-  "Outros (especificar)": {
-    emoji: "❓",
-    urgency: "media",
-    explanation:
-      "Sintomas específicos podem indicar necessidades únicas. É importante investigar para um diagnóstico preciso e um plano de tratamento personalizado.",
-  },
-}
-
-// In getSymptomWithUrgencyEmoji function:
-// Update the return type and logic to include the explanation.
-function getSymptomWithUrgencyEmoji(symptom: string): {
-  text: string
-  emoji: string
-  urgency: "alta" | "media" | "baixa"
-  explanation: string // Added explanation
-} {
-  // Handle the custom "Outros: " prefix for the explanation
-  if (symptom.startsWith("Outros: ")) {
-    return {
-      text: symptom,
-      emoji: symptomDetailsMap["Outros (especificar)"].emoji,
-      urgency: symptomDetailsMap["Outros (especificar)"].urgency,
-      explanation: symptomDetailsMap["Outros (especificar)"].explanation,
-    }
-  }
-
-  const mapped = symptomDetailsMap[symptom] || {
-    emoji: "⚠️",
-    urgency: "media" as const,
-    explanation: "Este sintoma requer atenção para um diagnóstico mais preciso.",
-  }
-  return {
-    text: symptom,
-    emoji: mapped.emoji,
-    urgency: mapped.urgency,
-    explanation: mapped.explanation,
-  }
-}
-
-// Mock functions for calculateTotalScore, enviarParaMakeWebhook, and enviarParaActiveCampaign
-// Replace these with your actual implementations
+// Mock functions to calculate total score
 function calculateTotalScore(respostas: Record<string, Resposta>): number {
   let totalScore = 0
 
@@ -666,7 +565,7 @@ function calculateTotalScore(respostas: Record<string, Resposta>): number {
 
 async function enviarParaMakeWebhook(data: any): Promise<{ success: boolean; message: string }> {
   try {
-    const webhookUrl = "https://hook.us1.make.com/vyw4m59kgv3os7nsqvjcv710ladonf1m"
+    const webhookUrl = "https://hook.us1.make.com/dysdyauurc079jp9gguopskqhen6d1m4"
 
     if (!webhookUrl) {
       throw new Error("URL do webhook não configurada")
@@ -735,7 +634,7 @@ async function enviarParaActiveCampaign(data: any): Promise<{ success: boolean; 
   }
 }
 
-export default function QuestionarioMenopausa() {
+export default function QuestionarioLeadPago() {
   const [currentStep, setCurrentStep] = useState(1)
   const [respostas, setRespostas] = useState<Record<string, Resposta>>({})
   const [startTime, setStartTime] = useState<number>(Date.now())
@@ -827,7 +726,7 @@ export default function QuestionarioMenopausa() {
 
   // --- FINALIZAR QUESTIONÁRIO --------------------------------------------
   const finalizarQuestionario = useCallback(async () => {
-    console.log("🚀 Iniciando finalização do questionário...")
+    console.log("🚀 Iniciando finalização do questionário Lead Pago...")
 
     const tempoTotalQuestionario = Date.now() - startTime
     setFinalScreenStartTime(Date.now())
@@ -980,9 +879,10 @@ export default function QuestionarioMenopausa() {
       timestamp: new Date().toISOString(),
       data_envio: new Date().toISOString(),
       user_agent: navigator.userAgent,
-      origem: "questionario-menopausa-web",
+      origem: "questionario-lead-pago",
       versao_questionario: "3.4",
-      tipo_questionario: "ORGANICO", // NOVA LINHA
+      tipo_questionario: "PAGO", // VALOR ATUALIZADO/CONFIRMADO
+      fonte: "campanhas_pagas",
       dispositivo: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? "mobile" : "desktop",
 
       // === DADOS DETALHADOS PARA ANÁLISE ===
@@ -991,12 +891,14 @@ export default function QuestionarioMenopausa() {
       // === DADOS PARA ACTIVE CAMPAIGN ===
       ac_tags: [
         qualificacaoLead,
+        "PAGO", // TAG ATUALIZADA/CONFIRMADA
+        "CAMPANHA_PAGA",
         formattedRespostas.fase_menopausa,
         formattedRespostas.urgencia_resolver === "É prioridade máxima" ? "URGENTE" : "NAO_URGENTE",
       ].filter(Boolean),
     }
 
-    console.log("🎯 DADOS COMPLETOS PARA ENVIO:", dadosCompletosParaMake)
+    console.log("🎯 DADOS COMPLETOS LEAD PAGO PARA ENVIO:", dadosCompletosParaMake)
 
     try {
       const resultadoMake = await enviarParaMakeWebhook(dadosCompletosParaMake)
@@ -1514,15 +1416,15 @@ function ResultadoFinal({
     try {
       const webhookData = {
         evento: "clique_botao_vip",
-        tipo_questionario: "ORGANICO",
+        tipo_questionario: "PAGO",
         timestamp: new Date().toISOString(),
         user_agent: navigator.userAgent,
         dispositivo: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? "mobile" : "desktop",
-        origem: "questionario-menopausa-web",
+        origem: "questionario-lead-pago",
         url_atual: window.location.href,
       }
 
-      const response = await fetch("https://hook.us1.make.com/vyw4m59kgv3os7nsqvjcv710ladonf1m", {
+      const response = await fetch("https://hook.us1.make.com/dysdyauurc079jp9gguopskqhen6d1m4", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1541,7 +1443,6 @@ function ResultadoFinal({
       setButtonLoading(false)
     }
   }
-
   return (
     <div className="min-h-screen bg-lilac-soft flex items-center justify-center p-4">
       <div className="w-full max-w-lg space-y-6">
@@ -1627,23 +1528,4 @@ function ResultadoFinal({
       </div>
     </div>
   )
-}
-
-// Função para recuperar dados salvos (para debug ou reenvio)
-function recuperarDadosLocais() {
-  try {
-    const dados = localStorage.getItem("menopausa_dados_backup")
-    const historico = localStorage.getItem("menopausa_historico")
-
-    console.log("📁 Dados salvos localmente:", dados ? JSON.parse(dados) : null)
-    console.log("📚 Histórico de leads:", historico ? JSON.parse(historico) : [])
-
-    return {
-      dadosAtuais: dados ? JSON.parse(dados) : null,
-      historico: historico ? JSON.parse(historico) : [],
-    }
-  } catch (error) {
-    console.error("Erro ao recuperar dados locais:", error)
-    return { dadosAtuais: null, historico: [] }
-  }
 }
