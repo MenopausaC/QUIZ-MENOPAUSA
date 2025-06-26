@@ -244,7 +244,7 @@ const questions: Question[] = [
   {
     id: "ja_conhecia",
     type: "radio",
-    textInitial: "Você já conhecia a Dra. Giovana/",
+    textInitial: "Você já conhecia a Dra. Giovanna/",
     textHighlight: "Menopausa Cancelada",
     emoji: "👋",
     options: [
