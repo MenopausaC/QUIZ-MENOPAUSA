@@ -82,6 +82,9 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- Adicione esta linha para remover o trigger se ele já existir
+DROP TRIGGER IF EXISTS update_leads_menopausa_updated_at ON leads_menopausa;
+
 CREATE TRIGGER update_leads_menopausa_updated_at 
     BEFORE UPDATE ON leads_menopausa 
     FOR EACH ROW 

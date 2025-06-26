@@ -1,19 +1,60 @@
 "use client"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { mockMenopausaData, countOccurrences } from "@/lib/mock-data"
-import { BarChart3, PieChartIcon, Users, ExternalLink, Copy, Check } from "lucide-react"
+import { countOccurrences, type LeadMenopausaData } from "@/lib/mock-data" // Atualizado o import
+import { BarChart3, PieChartIcon, Users, ExternalLink, Copy, Check, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function LeadOrganicoTabContent() {
   const { toast } = useToast()
   const [copied, setCopied] = useState(false)
-  const totalRespostas = mockMenopausaData.length
-  const faseMenopausaCounts = countOccurrences(mockMenopausaData, "fase_menopausa")
-  const principalSintomaCounts = countOccurrences(mockMenopausaData, "principal_sintoma")
-  const idadeFaixaCounts = countOccurrences(mockMenopausaData, "idade_faixa")
+  const [organicoLeads, setOrganicoLeads] = useState<LeadMenopausaData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchOrganicoLeads = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/dashboard-data?type=ORGANICO")
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data: LeadMenopausaData[] = await response.json()
+        setOrganicoLeads(data)
+      } catch (e) {
+        setError((e as Error).message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchOrganicoLeads()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+        <p className="ml-2 text-purple-500">Carregando dados do Lead Orgânico...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-500 p-4">
+        <p>Erro ao carregar dados do Lead Orgânico: {error}</p>
+        <p>Por favor, verifique sua conexão com o Supabase e as políticas de RLS.</p>
+      </div>
+    )
+  }
+
+  const totalRespostas = organicoLeads.length
+  const faseMenopausaCounts = countOccurrences(organicoLeads, "fase_menopausa")
+  const principalSintomaCounts = countOccurrences(organicoLeads, "principal_sintoma")
+  const idadeFaixaCounts = countOccurrences(organicoLeads, "idade_faixa")
 
   const pieDataFaseMenopausa = Object.entries(faseMenopausaCounts).map(([name, value], index) => ({
     name,
@@ -128,17 +169,21 @@ export default function LeadOrganicoTabContent() {
           <CardContent className="h-[350px] flex flex-col justify-center items-center p-6">
             <div className="text-center text-slate-500 dark:text-slate-400 w-full">
               <p className="text-lg font-semibold mb-4">Gráfico de Pizza (Simulado)</p>
-              <ul className="list-disc list-inside text-left space-y-1">
-                {pieDataFaseMenopausa.map((item) => (
-                  <li key={item.name} className="flex items-center">
-                    <span
-                      className="inline-block w-3 h-3 rounded-full mr-2"
-                      style={{ backgroundColor: item.fill }}
-                    ></span>
-                    {item.name}: {item.value} ({((item.value / totalRespostas) * 100).toFixed(1)}%)
-                  </li>
-                ))}
-              </ul>
+              {totalRespostas > 0 ? (
+                <ul className="list-disc list-inside text-left space-y-1">
+                  {pieDataFaseMenopausa.map((item) => (
+                    <li key={item.name} className="flex items-center">
+                      <span
+                        className="inline-block w-3 h-3 rounded-full mr-2"
+                        style={{ backgroundColor: item.fill }}
+                      ></span>
+                      {item.name}: {item.value} ({((item.value / totalRespostas) * 100).toFixed(1)}%)
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>Nenhum dado disponível para exibir.</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -156,24 +201,28 @@ export default function LeadOrganicoTabContent() {
           <CardContent className="h-[350px] flex flex-col justify-center items-center p-6">
             <div className="text-center text-slate-500 dark:text-slate-400 w-full">
               <p className="text-lg font-semibold mb-4">Gráfico de Barras (Simulado)</p>
-              <ul className="list-none text-left space-y-2 w-full">
-                {barDataPrincipalSintoma.map((item) => (
-                  <li key={item.name} className="text-sm">
-                    <div className="flex justify-between mb-1">
-                      <span className="font-medium text-slate-600 dark:text-slate-300">{item.name}</span>
-                      <span className="text-slate-500 dark:text-slate-400">{item.count}</span>
-                    </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                      <div
-                        className="bg-purple-500 h-3 rounded-full"
-                        style={{
-                          width: `${(item.count / Math.max(1, ...barDataPrincipalSintoma.map((i) => i.count))) * 100}%`,
-                        }}
-                      ></div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              {totalRespostas > 0 ? (
+                <ul className="list-none text-left space-y-2 w-full">
+                  {barDataPrincipalSintoma.map((item) => (
+                    <li key={item.name} className="text-sm">
+                      <div className="flex justify-between mb-1">
+                        <span className="font-medium text-slate-600 dark:text-slate-300">{item.name}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{item.count}</span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                        <div
+                          className="bg-purple-500 h-3 rounded-full"
+                          style={{
+                            width: `${(item.count / Math.max(1, ...barDataPrincipalSintoma.map((i) => i.count))) * 100}%`,
+                          }}
+                        ></div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>Nenhum dado disponível para exibir.</p>
+              )}
             </div>
           </CardContent>
         </Card>

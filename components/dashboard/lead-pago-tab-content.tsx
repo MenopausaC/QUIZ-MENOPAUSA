@@ -1,18 +1,73 @@
 "use client"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { mockNovoQuestionarioData, countOccurrences } from "@/lib/mock-data"
-import { BarChart3, PieChartIcon, Users, ExternalLink, Smile, ThumbsUp, Copy, Check, AlertTriangle } from "lucide-react"
+import { countOccurrences, type LeadMenopausaData } from "@/lib/mock-data" // Atualizado o import
+import {
+  BarChart3,
+  PieChartIcon,
+  Users,
+  ExternalLink,
+  Smile,
+  ThumbsUp,
+  Copy,
+  Check,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function LeadPagoTabContent() {
   const { toast } = useToast()
   const [copied, setCopied] = useState(false)
-  const totalRespostas = mockNovoQuestionarioData.length
-  const satisfacaoCounts = countOccurrences(mockNovoQuestionarioData, "satisfacao_produto")
-  const recomendariaCounts = countOccurrences(mockNovoQuestionarioData, "recomendaria_servico")
+  const [pagoLeads, setPagoLeads] = useState<LeadMenopausaData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchPagoLeads = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/dashboard-data?type=PAGO")
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data: LeadMenopausaData[] = await response.json()
+        setPagoLeads(data)
+      } catch (e) {
+        setError((e as Error).message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPagoLeads()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+        <p className="ml-2 text-purple-500">Carregando dados do Lead Pago...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-500 p-4">
+        <p>Erro ao carregar dados do Lead Pago: {error}</p>
+        <p>Por favor, verifique sua conexão com o Supabase e as políticas de RLS.</p>
+      </div>
+    )
+  }
+
+  const totalRespostas = pagoLeads.length
+  // Para o questionário pago, você precisaria de campos como 'satisfacao_produto' e 'recomendaria_servico'
+  // na sua tabela leads_menopausa ou em uma tabela separada.
+  // Estou usando campos fictícios aqui para demonstrar a lógica.
+  const satisfacaoCounts = countOccurrences(pagoLeads, "satisfacao_produto") // Assumindo que este campo existe
+  const recomendariaCounts = countOccurrences(pagoLeads, "recomendaria_servico") // Assumindo que este campo existe
 
   const pieDataSatisfacao = Object.entries(satisfacaoCounts).map(([name, value], index) => ({
     name,
@@ -143,17 +198,21 @@ export default function LeadPagoTabContent() {
           <CardContent className="h-[350px] flex flex-col justify-center items-center p-6">
             <div className="text-center text-slate-500 dark:text-slate-400 w-full">
               <p className="text-lg font-semibold mb-4">Gráfico de Pizza (Simulado)</p>
-              <ul className="list-disc list-inside text-left space-y-1">
-                {pieDataSatisfacao.map((item) => (
-                  <li key={item.name} className="flex items-center">
-                    <span
-                      className="inline-block w-3 h-3 rounded-full mr-2"
-                      style={{ backgroundColor: item.fill }}
-                    ></span>
-                    {item.name}: {item.value} ({((item.value / totalRespostas) * 100).toFixed(1)}%)
-                  </li>
-                ))}
-              </ul>
+              {totalRespostas > 0 ? (
+                <ul className="list-disc list-inside text-left space-y-1">
+                  {pieDataSatisfacao.map((item) => (
+                    <li key={item.name} className="flex items-center">
+                      <span
+                        className="inline-block w-3 h-3 rounded-full mr-2"
+                        style={{ backgroundColor: item.fill }}
+                      ></span>
+                      {item.name}: {item.value} ({((item.value / totalRespostas) * 100).toFixed(1)}%)
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>Nenhum dado disponível para exibir.</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -171,24 +230,28 @@ export default function LeadPagoTabContent() {
           <CardContent className="h-[350px] flex flex-col justify-center items-center p-6">
             <div className="text-center text-slate-500 dark:text-slate-400 w-full">
               <p className="text-lg font-semibold mb-4">Gráfico de Barras (Simulado)</p>
-              <ul className="list-none text-left space-y-2 w-full">
-                {barDataRecomendaria.map((item) => (
-                  <li key={item.name} className="text-sm">
-                    <div className="flex justify-between mb-1">
-                      <span className="font-medium text-slate-600 dark:text-slate-300">{item.name}</span>
-                      <span className="text-slate-500 dark:text-slate-400">{item.count}</span>
-                    </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                      <div
-                        className="bg-teal-500 h-3 rounded-full"
-                        style={{
-                          width: `${(item.count / Math.max(1, ...barDataRecomendaria.map((i) => i.count))) * 100}%`,
-                        }}
-                      ></div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              {totalRespostas > 0 ? (
+                <ul className="list-none text-left space-y-2 w-full">
+                  {barDataRecomendaria.map((item) => (
+                    <li key={item.name} className="text-sm">
+                      <div className="flex justify-between mb-1">
+                        <span className="font-medium text-slate-600 dark:text-slate-300">{item.name}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{item.count}</span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                        <div
+                          className="bg-teal-500 h-3 rounded-full"
+                          style={{
+                            width: `${(item.count / Math.max(1, ...barDataRecomendaria.map((i) => i.count))) * 100}%`,
+                          }}
+                        ></div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>Nenhum dado disponível para exibir.</p>
+              )}
             </div>
           </CardContent>
         </Card>

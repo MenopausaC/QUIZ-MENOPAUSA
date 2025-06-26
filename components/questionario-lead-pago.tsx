@@ -10,8 +10,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
-import { Heart, CheckCircle, CalendarDays } from "lucide-react"
+import { Heart, CheckCircle, CalendarDays, Download } from "lucide-react" // Adicionado Download
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation" // Importar useRouter
 
 interface Question {
   id: string
@@ -1404,45 +1405,57 @@ function ResultadoFinal({
   webhookStatus?: { success: boolean; message: string; fallbackUsed?: boolean }
   healthReport: HealthReportContent
 }) {
-  const [buttonClicked, setButtonClicked] = useState(false)
-  const [buttonLoading, setButtonLoading] = useState(false)
+  const router = useRouter() // Inicializar useRouter
+  const [ebookButtonClicked, setEbookButtonClicked] = useState(false) // Novo estado para o botão de e-book
+  const [ebookButtonLoading, setEbookButtonLoading] = useState(false) // Novo estado de loading para e-book
 
-  const handleVipButtonClick = async () => {
-    if (buttonClicked) return // Evita cliques duplos
+  const handleEbookButtonClick = async () => {
+    if (ebookButtonClicked) return // Evita cliques duplos
 
-    setButtonLoading(true)
-    setButtonClicked(true)
+    setEbookButtonLoading(true)
+    setEbookButtonClicked(true)
 
     try {
       const webhookData = {
-        evento: "clique_botao_vip",
+        evento: "clique_botao_ebook",
         tipo_questionario: "PAGO",
         timestamp: new Date().toISOString(),
         user_agent: navigator.userAgent,
         dispositivo: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? "mobile" : "desktop",
         origem: "questionario-lead-pago",
         url_atual: window.location.href,
+        ip_address: "unknown", // Placeholder - seria obtido do servidor
+        referrer: document.referrer || "direct",
+        screen_resolution: `${screen.width}x${screen.height}`,
+        viewport_size: `${window.innerWidth}x${window.innerHeight}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: navigator.language,
+        platform: navigator.platform,
+        session_duration: Date.now() - performance.timing.navigationStart,
       }
 
       const response = await fetch("https://hook.us1.make.com/dysdyauurc079jp9gguopskqhen6d1m4", {
+        // Webhook do Lead Pago
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ vip_button_click: webhookData }),
+        body: JSON.stringify({ ebook_button_click: webhookData }), // Envia o evento de clique do e-book
       })
 
       if (response.ok) {
-        console.log("✅ Clique no botão VIP registrado com sucesso")
+        console.log("✅ Clique no botão E-book registrado com sucesso (Lead Pago)")
       } else {
-        console.error("❌ Erro ao registrar clique no botão VIP")
+        console.error("❌ Erro ao registrar clique no botão E-book (Lead Pago)")
       }
     } catch (error) {
-      console.error("💥 Erro ao enviar webhook do botão VIP:", error)
+      console.error("💥 Erro ao enviar webhook do botão E-book (Lead Pago):", error)
     } finally {
-      setButtonLoading(false)
+      setEbookButtonLoading(false)
+      router.push("/obrigado") // Redireciona para a página de obrigado
     }
   }
+
   return (
     <div className="min-h-screen bg-lilac-soft flex items-center justify-center p-4">
       <div className="w-full max-w-lg space-y-6">
@@ -1504,17 +1517,16 @@ function ResultadoFinal({
 
             {/* Botão CTA */}
             <div className="text-center">
+              {" "}
+              {/* Adicionado space-y-4 para espaçamento entre botões */}
+              {/* Novo botão para baixar e-books */}
               <Button
-                onClick={handleVipButtonClick}
-                disabled={buttonLoading}
-                className="w-full bg-purple-primary text-white hover:bg-purple-primary/90 py-4 text-lg font-poppins font-medium shadow-md rounded-xl flex items-center justify-center disabled:opacity-50"
+                onClick={handleEbookButtonClick}
+                disabled={ebookButtonLoading}
+                className="w-full bg-rose-wine text-white hover:bg-rose-wine/90 py-4 text-lg font-poppins font-medium shadow-md rounded-xl flex items-center justify-center disabled:opacity-50"
               >
-                <CalendarDays className="w-5 h-5 mr-2" />
-                {buttonLoading
-                  ? "Processando..."
-                  : buttonClicked
-                    ? "✅ Inscrito na Lista VIP!"
-                    : "Quero Entrar na Lista VIP"}
+                <Download className="w-5 h-5 mr-2" />
+                {ebookButtonLoading ? "Carregando E-books..." : "Baixar E-books Gratuitos"}
               </Button>
             </div>
 
