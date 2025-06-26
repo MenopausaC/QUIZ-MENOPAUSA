@@ -24,8 +24,11 @@ export default function ObrigadoPage() {
                 Seus E-books Exclusivos Estão Prontos!
               </h3>
               <p className="text-dark-purple-text text-sm leading-relaxed font-poppins">
-                Como agradecimento pela sua participação, preparamos 3 e-books especiais para você. Clique nos botões
-                abaixo para <span className="whitespace-nowrap">baixá-los:</span>
+                <span className="whitespace-nowrap">Como agradecimento pela sua participação,</span>
+                <br />
+                <span className="whitespace-nowrap">preparamos 3 e-books especiais para você.</span>
+                <br />
+                <span className="whitespace-nowrap">Clique nos botões abaixo para baixá-los:</span>
               </p>
             </div>
 
