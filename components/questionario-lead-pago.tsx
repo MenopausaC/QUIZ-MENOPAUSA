@@ -1433,45 +1433,52 @@ function ResultadoFinal({
     setEbookButtonLoading(true)
     setEbookButtonClicked(true)
 
-    try {
-      const webhookData = {
-        evento: "clique_botao_ebook",
-        tipo_questionario: "PAGO",
-        timestamp: new Date().toISOString(),
-        user_agent: navigator.userAgent,
-        dispositivo: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? "mobile" : "desktop",
-        origem: "questionario-lead-pago",
-        url_atual: window.location.href,
-        ip_address: "unknown", // Placeholder - seria obtido do servidor
-        referrer: document.referrer || "direct",
-        screen_resolution: `${screen.width}x${screen.height}`,
-        viewport_size: `${window.innerWidth}x${window.innerHeight}`,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        language: navigator.language,
-        platform: navigator.platform,
-        session_duration: Date.now() - performance.timing.navigationStart,
-      }
+    // REMOVIDO: O bloco try-catch que enviava o webhook
+    // try {
+    //   const webhookData = {
+    //     evento: "clique_botao_ebook",
+    //     tipo_questionario: "PAGO",
+    //     timestamp: new Date().toISOString(),
+    //     user_agent: navigator.userAgent,
+    //     dispositivo: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? "mobile" : "desktop",
+    //     origem: "questionario-lead-pago",
+    //     url_atual: window.location.href,
+    //     ip_address: "unknown", // Placeholder - seria obtido do servidor
+    //     referrer: document.referrer || "direct",
+    //     screen_resolution: `${screen.width}x${screen.height}`,
+    //     viewport_size: `${window.innerWidth}x${window.innerHeight}`,
+    //     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    //     language: navigator.language,
+    //     platform: navigator.platform,
+    //     session_duration: Date.now() - performance.timing.navigationStart,
+    //   }
 
-      const response = await fetch("https://hook.us1.make.com/dysdyauurc079jp9gguopskqhen6d1m4", {
-        // Webhook do Lead Pago
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ebook_button_click: webhookData }), // Envia o evento de clique do e-book
-      })
+    //   const response = await fetch("https://hook.us1.make.com/dysdyauurc079jp9gguopskqhen6d1m4", {
+    //     // Webhook do Lead Pago
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify({ ebook_button_click: webhookData }), // Envia o evento de clique do e-book
+    //   })
 
-      if (response.ok) {
-        console.log("✅ Clique no botão E-book registrado com sucesso (Lead Pago)")
-      } else {
-        console.error("❌ Erro ao registrar clique no botão E-book (Lead Pago)")
-      }
-    } catch (error) {
-      console.error("💥 Erro ao enviar webhook do botão E-book (Lead Pago):", error)
-    } finally {
+    //   if (response.ok) {
+    //     console.log("✅ Clique no botão E-book registrado com sucesso (Lead Pago)")
+    //   } else {
+    //     console.error("❌ Erro ao registrar clique no botão E-book (Lead Pago)")
+    //   }
+    // } catch (error) {
+    //   console.error("💥 Erro ao enviar webhook do botão E-book (Lead Pago):", error)
+    // } finally {
+    //   setEbookButtonLoading(false)
+    //   router.push("/obrigado") // Redireciona para a página de obrigado
+    // }
+
+    // Apenas redireciona após um pequeno delay para simular o carregamento
+    setTimeout(() => {
       setEbookButtonLoading(false)
       router.push("/obrigado") // Redireciona para a página de obrigado
-    }
+    }, 500) // Pequeno delay para UX
   }
 
   return (

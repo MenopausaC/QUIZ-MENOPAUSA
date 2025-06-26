@@ -1523,16 +1523,9 @@ function ResultadoFinal({
   webhookStatus?: { success: boolean; message: string; fallbackUsed?: boolean }
   healthReport: HealthReportContent
 }) {
-  // REMOVER estas linhas:
-  // REMOVER estas linhas:
-  // REMOVER estas linhas:
   const [ebookButtonClicked, setEbookButtonClicked] = useState(false) // Novo estado para o botão de e-book
   const [ebookButtonLoading, setEbookButtonLoading] = useState(false) // Novo estado de loading para e-book
   const router = useRouter() // Inicializar useRouter
-
-  // REMOVER toda esta função:
-  // REMOVER toda esta função:
-  // REMOVER toda esta função:
 
   const handleEbookButtonClick = async () => {
     if (ebookButtonClicked) return // Evita cliques duplas
@@ -1540,45 +1533,11 @@ function ResultadoFinal({
     setEbookButtonLoading(true)
     setEbookButtonClicked(true)
 
-    try {
-      const webhookData = {
-        evento: "clique_botao_ebook",
-        tipo_questionario: "ORGANICO",
-        timestamp: new Date().toISOString(),
-        user_agent: navigator.userAgent,
-        dispositivo: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? "mobile" : "desktop",
-        origem: "questionario-menopausa-web",
-        url_atual: window.location.href,
-        // ADICIONAR estes novos campos:
-        ip_address: "unknown", // Placeholder - seria obtido do servidor
-        referrer: document.referrer || "direct",
-        screen_resolution: `${screen.width}x${screen.height}`,
-        viewport_size: `${window.innerWidth}x${window.innerHeight}`,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        language: navigator.language,
-        platform: navigator.platform,
-        session_duration: Date.now() - performance.timing.navigationStart,
-      }
-
-      const response = await fetch("https://hook.us1.make.com/vyw4m59kgv3os7nsqvjcv710ladonf1m", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ebook_button_click: webhookData }), // Envia o evento de clique do e-book
-      })
-
-      if (response.ok) {
-        console.log("✅ Clique no botão E-book registrado com sucesso")
-      } else {
-        console.error("❌ Erro ao registrar clique no botão E-book")
-      }
-    } catch (error) {
-      console.error("💥 Erro ao enviar webhook do botão E-book:", error)
-    } finally {
+    // Apenas redireciona após um pequeno delay para simular o carregamento
+    setTimeout(() => {
       setEbookButtonLoading(false)
       router.push("/obrigado") // Redireciona para a página de obrigado
-    }
+    }, 500) // Pequeno delay para UX
   }
 
   return (
