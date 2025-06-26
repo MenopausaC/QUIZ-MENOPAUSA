@@ -104,13 +104,14 @@ const questions: Question[] = [
     options: ["Grave", "Moderada", "Leve"], // Grave primeiro
     emoji: "📈",
   },
-  // Q5: Fora esse, qual desses sintomas te incomoda mais?
+  // Q4: Fora esse, qual desses sintomas te incomoda mais? (Agora com opções dinâmicas)
   {
     id: "outros_sintomas_incomodam",
-    type: "radio", // Mudado de "checkbox" para "radio"
+    type: "radio",
     textInitial: "Fora esse, qual desses",
     textHighlight: "sintomas te incomoda mais",
     textInitial2: "?",
+    // As opções base para esta pergunta, antes da adição dinâmica e filtragem
     options: [
       "Ansiedade ou Depressão",
       "Cansaço constante",
@@ -123,7 +124,7 @@ const questions: Question[] = [
     optional: true,
     emoji: "😩",
   },
-  // Q4: Há quanto tempo você sente os sintomas?
+  // Q5: Há quanto tempo você sente os sintomas?
   {
     id: "tempo_sintomas",
     type: "radio",
@@ -243,7 +244,7 @@ const questions: Question[] = [
   {
     id: "ja_conhecia",
     type: "radio",
-    textInitial: "Você já conhecia a Dra. Giovana/",
+    textInitial: "Você já conhecia a Dra. Giovanna/",
     textHighlight: "Menopausa Cancelada",
     emoji: "👋",
     options: [
@@ -314,12 +315,6 @@ const questions: Question[] = [
     emoji: "📧",
   },
 ]
-
-// Apply reorderOptions to all questions that have options
-const finalQuestions = questions.map((q) => ({
-  ...q,
-  options: q.options ? reorderOptions(q.options) : q.options,
-}))
 
 // Update calculateLeadQualification function
 function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTotalQuestionario: number): string {
@@ -760,7 +755,7 @@ export default function QuestionarioMenopausa() {
   // Function to determine if the current step is valid
   const isStepValid = useCallback(
     (questionId: string): boolean => {
-      const question = finalQuestions[currentStep - 1]
+      const question = questions[currentStep - 1]
 
       if (!question) return false
 
@@ -818,7 +813,7 @@ export default function QuestionarioMenopausa() {
     [
       currentStep,
       respostas,
-      finalQuestions,
+      questions,
       showOtherMainSymptomInput,
       showOtherSymptomsInput,
       showOtherImpactInput,
@@ -847,8 +842,7 @@ export default function QuestionarioMenopausa() {
     // Encontrar a pergunta que levou mais tempo
     let perguntaMaisLenta = { id: "", tempo: 0, texto: "" }
 
-    // Use finalQuestions here
-    finalQuestions.forEach((q, index) => {
+    questions.forEach((q, index) => {
       const resposta = respostas[q.id]
       if (resposta) {
         formattedRespostas[q.id] = resposta.value
@@ -877,7 +871,7 @@ export default function QuestionarioMenopausa() {
       }
     })
 
-    const tempoMedioResposta = finalQuestions.length > 0 ? Math.round(totalTempoResposta / finalQuestions.length) : 0
+    const tempoMedioResposta = questions.length > 0 ? Math.round(totalTempoResposta / questions.length) : 0
     const qualificacaoLead = calculateLeadQualification(respostas, tempoTotalQuestionario)
     const saudeReport = generateHealthReport(respostas)
 
@@ -914,7 +908,7 @@ export default function QuestionarioMenopausa() {
           : "Baixa Urgência"
 
     // Tempo Final (tempo gasto na última pergunta)
-    const tempoFinalPergunta = respostas[finalQuestions[finalQuestions.length - 1].id]?.timeTaken || 0
+    const tempoFinalPergunta = respostas[questions[questions.length - 1].id]?.timeTaken || 0
 
     // ➕ Obtém o motivo da inscrição (resposta única da pergunta 10)
     const motivoInscricaoEvento = (formattedRespostas.motivo_inscricao_evento as string) ?? ""
@@ -970,9 +964,9 @@ export default function QuestionarioMenopausa() {
       pergunta_mais_lenta_tempo_segundos: Math.round(perguntaMaisLenta.tempo / 1000),
 
       // === COMPORTAMENTO NO QUESTIONÁRIO ===
-      total_perguntas: finalQuestions.length,
+      total_perguntas: questions.length,
       perguntas_respondidas: Object.keys(respostas).length,
-      taxa_completude: Math.round((Object.keys(respostas).length / finalQuestions.length) * 100),
+      taxa_completude: Math.round((Object.keys(respostas).length / questions.length) * 100),
       voltas_perguntas: 0,
       hesitacao_perguntas: [],
       engajamento: tempoTotalQuestionario < 120000 ? "ALTO" : tempoTotalQuestionario < 300000 ? "MEDIO" : "BAIXO",
@@ -1032,13 +1026,13 @@ export default function QuestionarioMenopausa() {
     }
 
     setShowResult(true)
-  }, [respostas, startTime, finalQuestions])
+  }, [respostas, startTime, questions])
   // ------------------------------------------------------------------------
 
-  const totalSteps = finalQuestions.length
+  const totalSteps = questions.length
 
   const handleNext = useCallback(() => {
-    const question = finalQuestions[currentStep - 1]
+    const question = questions[currentStep - 1]
 
     if (question?.id === "valor_disposto_pagar") {
       setShowGratificationMessage(true)
@@ -1049,7 +1043,7 @@ export default function QuestionarioMenopausa() {
 
       // Se a pergunta atual é sobre estado civil e a resposta é "Não", pule a pergunta de impacto no relacionamento
       if (question?.id === "estado_civil" && respostas.estado_civil?.value === "Não") {
-        const nextQuestion = finalQuestions[nextStep - 1]
+        const nextQuestion = questions[nextStep - 1]
         if (nextQuestion?.id === "impacto_sintomas_relacionamento") {
           nextStep = nextStep + 1 // Pula a pergunta de impacto no relacionamento
         }
@@ -1060,14 +1054,14 @@ export default function QuestionarioMenopausa() {
     } else {
       finalizarQuestionario()
     }
-  }, [currentStep, totalSteps, finalizarQuestionario, finalQuestions, respostas])
+  }, [currentStep, totalSteps, finalizarQuestionario, questions, respostas])
 
   useEffect(() => {
     setQuestionStartTime(Date.now())
     // Reset gratification message and other symptoms input visibility when step changes
     setShowGratificationMessage(false)
 
-    const currentQuestion = finalQuestions[currentStep - 1]
+    const currentQuestion = questions[currentStep - 1]
     // If current question is Q5 and "Outros (especificar)" was selected previously, show the input
     if (
       currentQuestion?.id === "outros_sintomas_incomodam" &&
@@ -1100,11 +1094,11 @@ export default function QuestionarioMenopausa() {
     } else {
       setShowOtherRelationshipImpactInput(false)
     }
-  }, [currentStep, respostas, finalQuestions])
+  }, [currentStep, respostas, questions])
 
   // NEW: Efeito para auto-avançar perguntas de rádio
   useEffect(() => {
-    const currentQuestion = finalQuestions[currentStep - 1]
+    const currentQuestion = questions[currentStep - 1]
     if (!currentQuestion) return
 
     // Only auto-advance for radio questions
@@ -1140,7 +1134,7 @@ export default function QuestionarioMenopausa() {
         return () => clearTimeout(timer)
       }
     }
-  }, [respostas, currentStep, handleNext, finalQuestions])
+  }, [respostas, currentStep, handleNext, questions])
 
   // Efeito para o timer (mantido para a lógica, mas não renderizado diretamente)
   useEffect(() => {
@@ -1242,7 +1236,7 @@ export default function QuestionarioMenopausa() {
   }
 
   const renderCurrentQuestion = () => {
-    const question = finalQuestions[currentStep - 1]
+    const question = questions[currentStep - 1]
     if (!question) return null
 
     // Se a pergunta é sobre impacto no relacionamento e a pessoa não é casada, pule
@@ -1307,40 +1301,66 @@ export default function QuestionarioMenopausa() {
             <RadioGroup
               onValueChange={(value) => handleAnswer(question.id, value)}
               value={(respostas[question.id]?.value as string) || ""}
-              /* two-column layout for Q2 */
-              className="space-y-3"
+              className={cn(
+                "space-y-3", // Default for most radio groups
+                question.id === "outros_sintomas_incomodam" && "grid grid-cols-2 gap-4", // Two columns for Q4
+              )}
             >
-              {question.options?.map((option, index) => {
-                const optionText = typeof option === "string" ? option : option.text
-                const isIntensidadeSintomaPrincipal = question.id === "intensidade_sintoma_principal"
-                const isLeve = optionText.includes("Leve")
-                const isModerado = optionText.includes("Moderada") || optionText.includes("Moderado")
-                const isGrave = optionText.includes("Grave")
+              {(() => {
+                let currentOptions = question.options as string[]
 
-                return (
-                  <div key={index} className="flex items-center">
-                    <RadioGroupItem value={optionText} id={`${question.id}-${index}`} />
-                    <Label
-                      htmlFor={`${question.id}-${index}`}
-                      className="ml-3 text-dark-purple-text text-base font-poppins flex-1 p-4 bg-white border border-default-option-border rounded-xl hover:border-purple-medium hover:shadow-sm hover:z-10 relative transition-all duration-200 cursor-pointer flex flex-col items-start data-[state=checked]:border-purple-primary data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-purple-primary data-[state=checked]:to-purple-medium data-[state=checked]:text-white hover:bg-lavender-soft"
-                    >
-                      <span>{optionText}</span>
-                      {isIntensidadeSintomaPrincipal && (isLeve || isModerado || isGrave) && (
-                        <div className="mt-2 w-full flex items-center">
-                          <div
-                            className={cn(
-                              "h-2 rounded-full",
-                              isLeve && "w-1/3 bg-green-500",
-                              isModerado && "w-2/3 bg-yellow-500",
-                              isGrave && "w-full bg-red-500",
-                            )}
-                          />
-                        </div>
-                      )}
-                    </Label>
-                  </div>
-                )
-              })}
+                // Se for a pergunta "outros_sintomas_incomodam" (Q4)
+                if (question.id === "outros_sintomas_incomodam") {
+                  const principalSymptomAnswer = respostas.principal_sintoma?.value as string
+                  const principalSymptomQuestion = questions.find((q) => q.id === "principal_sintoma")
+                  const principalSymptomOptions = (principalSymptomQuestion?.options as string[]) || []
+
+                  // Combine as opções originais da Q4 com as opções da Q2
+                  let combinedOptions = [...new Set([...currentOptions, ...principalSymptomOptions])]
+
+                  // Filtre a opção que foi selecionada na Q2
+                  if (principalSymptomAnswer) {
+                    combinedOptions = combinedOptions.filter((opt) => opt !== principalSymptomAnswer)
+                  }
+                  // Reordena as opções para garantir "Nenhum desses" e "Outros" no final
+                  currentOptions = reorderOptions(combinedOptions)
+                } else {
+                  // Para outras perguntas, apenas reordena as opções originais
+                  currentOptions = reorderOptions(currentOptions)
+                }
+
+                return currentOptions.map((option, index) => {
+                  const optionText = typeof option === "string" ? option : option.text
+                  const isIntensidadeSintomaPrincipal = question.id === "intensidade_sintoma_principal"
+                  const isLeve = optionText.includes("Leve")
+                  const isModerado = optionText.includes("Moderada") || optionText.includes("Moderado")
+                  const isGrave = optionText.includes("Grave")
+
+                  return (
+                    <div key={index} className="flex items-center">
+                      <RadioGroupItem value={optionText} id={`${question.id}-${index}`} />
+                      <Label
+                        htmlFor={`${question.id}-${index}`}
+                        className="ml-3 text-dark-purple-text text-base font-poppins flex-1 p-4 bg-white border border-default-option-border rounded-xl hover:border-purple-medium hover:shadow-sm hover:z-10 relative transition-all duration-200 cursor-pointer flex flex-col items-start data-[state=checked]:border-purple-primary data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-purple-primary data-[state=checked]:to-purple-medium data-[state=checked]:text-white hover:bg-lavender-soft"
+                      >
+                        <span>{optionText}</span>
+                        {isIntensidadeSintomaPrincipal && (isLeve || isModerado || isGrave) && (
+                          <div className="mt-2 w-full flex items-center">
+                            <div
+                              className={cn(
+                                "h-2 rounded-full",
+                                isLeve && "w-1/3 bg-green-500",
+                                isModerado && "w-2/3 bg-yellow-500",
+                                isGrave && "w-full bg-red-500",
+                              )}
+                            />
+                          </div>
+                        )}
+                      </Label>
+                    </div>
+                  )
+                })
+              })()}
             </RadioGroup>
             {question.id === "principal_sintoma" && showOtherMainSymptomInput && (
               <div className="mt-4 space-y-2 animate-fadeIn">
@@ -1515,7 +1535,7 @@ function ResultadoFinal({
   // REMOVER toda esta função:
 
   const handleEbookButtonClick = async () => {
-    if (ebookButtonClicked) return // Evita cliques duplos
+    if (ebookButtonClicked) return // Evita cliques duplas
 
     setEbookButtonLoading(true)
     setEbookButtonClicked(true)
