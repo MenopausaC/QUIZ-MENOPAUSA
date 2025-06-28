@@ -89,7 +89,14 @@ const questions: Question[] = [
     textInitial: "Qual seu",
     textHighlight: "principal sintoma",
     emoji: "💔",
-    options: ["Calorões", "Falta de Libido/Ressecamento", "Dores articulares", "Insônia", "Dificuldade para Emagrecer"],
+    options: [
+      "Calorões",
+      "Falta de Libido/Ressecamento",
+      "Dores articulares",
+      "Insônia",
+      "Dificuldade para Emagrecer",
+      "Outros (especificar)",
+    ],
   },
   {
     id: "intensidade_sintoma_principal",
@@ -211,9 +218,9 @@ const questions: Question[] = [
     textInitial2: "esse problema?",
     emoji: "💸",
     options: [
-      "Estou disposta a investir mais de 2.000 reais para acabar com meus sintomas",
-      "Posso investir no máximo 1000 reais parcelado",
-      "Não estou disposta a investir agora em minha saude",
+      "Estou disposta a investir qualquer valor para ter minha saúde de volta",
+      "Posso investir no maximo R$ 1.000 parcelado",
+      "Não estou disposta a investir em minha saúde agora",
     ],
   },
   {
@@ -331,7 +338,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     urgenciaResolver === "É prioridade máxima" &&
     fezReposicao &&
     fezReposicao !== "Nenhuma" &&
-    valorDispostoPagar === "Estou disposta a investir mais de 2.000 reais para acabar com meus sintomas" &&
+    valorDispostoPagar === "Estou disposta a investir qualquer valor para ter minha saúde de volta" &&
     tempoSintomas === "Á mais de 1 ano" &&
     rendaMensal === "Ganho mais de 3 salários mínimos" &&
     tempoMinutos < 2
@@ -344,7 +351,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     (fezReposicao === "Pesquisas na internet" ||
       fezReposicao === "Chás / manipulados / remédios caseiros" ||
       fezReposicao === "Nutricionista") &&
-    valorDispostoPagar === "Posso investir no máximo 1000 reais parcelado" &&
+    valorDispostoPagar === "Posso investir no maximo R$ 1.000 parcelado" &&
     (tempoSintomas === "Entre 6 meses a 1 ano" || tempoSintomas === "Á mais de 1 ano") &&
     (rendaMensal === "Ganho de 2 a 3 salários mínimos" || rendaMensal === "Ganho mais de 3 salários mínimos") &&
     tempoMinutos >= 2 &&
@@ -358,7 +365,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     fezReposicao === "Nenhuma" &&
     (motivoInscricaoEvento === "Fiquei curiosa e quero saber mais" ||
       motivoInscricaoEvento === "Influência ou indicação de amiga/parentes.") &&
-    valorDispostoPagar === "Não estou disposta a investir agora em minha saude" &&
+    valorDispostoPagar === "Não estou disposta a investir em minha saúde agora" &&
     (tempoSintomas === "Menos de 3 meses" || tempoSintomas === "Entre 3 a 6 meses") &&
     rendaMensal === "Ganho de 1 a 2 salários mínimos" &&
     tempoMinutos >= 4 &&
@@ -371,7 +378,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     totalSintomasIncomodam <= 1 ||
     (fezReposicao === "Nenhuma" && jaConhecia === "Não conhecia") ||
     rendaMensal === "Ganho de 1 a 2 salários mínimos" ||
-    valorDispostoPagar === "Não estou disposta a investir agora em minha saude" ||
+    valorDispostoPagar === "Não estou disposta a investir em minha saúde agora" ||
     tempoMinutos > 6
 
   if (isB) return "B"
@@ -403,8 +410,8 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     score += 2
   }
 
-  if (valorDispostoPagar === "Estou disposta a investir mais de 2.000 reais para acabar com meus sintomas") score += 3
-  else if (valorDispostoPagar === "Posso investir no máximo 1000 reais parcelado") score += 2
+  if (valorDispostoPagar === "Estou disposta a investir qualquer valor para ter minha saúde de volta") score += 3
+  else if (valorDispostoPagar === "Posso investir no maximo R$ 1.000 parcelado") score += 2
 
   if (rendaMensal === "Ganho mais de 3 salários mínimos") {
     score += 2
@@ -1479,54 +1486,30 @@ function ResultadoFinal({
                 <div className="w-8 h-8 bg-purple-primary rounded-lg flex items-center justify-center mr-3">
                   <CalendarDays className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="font-poppins font-medium text-dark-purple-text">Seus Próximos Passos</h3>
+                <h3 className="font-poppins font-medium text-dark-purple-text">Próximos Passos</h3>
               </div>
               <p className="text-dark-purple-text text-sm leading-relaxed font-poppins">
-                Devido à intensidade dos sintomas relatados, você pode receber{" "}
-                <span className="font-poppins font-semibold">prioridade</span> no atendimento durante o evento.
-                <br />
-                <br />
-                Uma das nossas especialistas pode entrar em contato com você para explicar, de forma acolhedora, segura
-                e sigilosa, como funciona o Acompanhamento Menopausa Cancelada.
+                Para uma análise detalhada e um plano de tratamento personalizado, baixe nosso ebook exclusivo.
               </p>
             </div>
 
-            <div className="text-center">
-              <Button
-                onClick={handleEbookButtonClick}
-                disabled={ebookButtonLoading}
-                className="w-full bg-rose-wine text-white hover:bg-rose-wine/90 py-4 text-lg font-poppins font-medium shadow-md rounded-xl flex items-center justify-center disabled:opacity-50"
-              >
-                <Download className="w-5 h-5 mr-2" />
-                {ebookButtonLoading ? "Carregando E-books..." : "Baixar E-books Gratuitos"}
-              </Button>
-            </div>
-
-            <div className="mt-6 text-center text-xs text-dark-purple-text font-poppins">
-              <span className="font-poppins font-medium">⭐ Importante:</span> Este é um resultado preliminar com base
-              nas suas respostas. Você está no caminho certo para transformar sua saúde e sua vida.
-            </div>
+            <Button
+              className="w-full bg-gradient-to-r from-green-400 to-green-600 text-white font-poppins font-medium shadow-md hover:shadow-lg transition-shadow duration-200"
+              onClick={handleEbookButtonClick}
+              disabled={ebookButtonClicked || ebookButtonLoading}
+            >
+              {ebookButtonLoading ? (
+                "Carregando..."
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Baixar Ebook Gratuito
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
       </div>
     </div>
   )
-}
-
-function recuperarDadosLocais() {
-  try {
-    const dados = localStorage.getItem("menopausa_dados_backup")
-    const historico = localStorage.getItem("menopausa_historico")
-
-    console.log("📁 Dados salvos localmente:", dados ? JSON.parse(dados) : null)
-    console.log("📚 Histórico de leads:", historico ? JSON.parse(historico) : [])
-
-    return {
-      dadosAtuais: dados ? JSON.parse(dados) : null,
-      historico: historico ? JSON.parse(historico) : [],
-    }
-  } catch (error) {
-    console.error("Erro ao recuperar dados locais:", error)
-    return { dadosAtuais: null, historico: [] }
-  }
 }

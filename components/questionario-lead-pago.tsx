@@ -211,10 +211,9 @@ const questions: Question[] = [
     textInitial2: "esse problema?",
     emoji: "💸",
     options: [
-      "Sim, mais de R$3.000,00",
-      "Sim, entre R$2.000,00 e R$3.000,00",
-      "Sim, entre R$1.000,00 e R$2.000,00",
-      "Não, no momento não posso investir",
+      "Estou disposta a investir qualquer valor para ter minha saúde de volta",
+      "Posso investir no maximo R$ 1.000 parcelado",
+      "Não estou disposta a investir em minha saúde agora",
     ],
   },
   {
@@ -332,7 +331,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     urgenciaResolver === "É prioridade máxima" &&
     fezReposicao &&
     fezReposicao !== "Nenhuma" &&
-    valorDispostoPagar === "Sim, mais de R$3.000,00" &&
+    valorDispostoPagar === "Estou disposta a investir qualquer valor para ter minha saúde de volta" &&
     tempoSintomas === "Á mais de 1 ano" &&
     rendaMensal === "Ganho mais de 3 salários mínimos" &&
     tempoMinutos < 2
@@ -345,7 +344,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     (fezReposicao === "Pesquisas na internet" ||
       fezReposicao === "Chás / manipulados / remédios caseiros" ||
       fezReposicao === "Nutricionista") &&
-    valorDispostoPagar === "Sim, entre R$2.000,00 e R$3.000,00" &&
+    valorDispostoPagar === "Posso investir no maximo R$ 1.000 parcelado" &&
     (tempoSintomas === "Entre 6 meses a 1 ano" || tempoSintomas === "Á mais de 1 ano") &&
     (rendaMensal === "Ganho de 2 a 3 salários mínimos" || rendaMensal === "Ganho mais de 3 salários mínimos") &&
     tempoMinutos >= 2 &&
@@ -359,7 +358,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     fezReposicao === "Nenhuma" &&
     (motivoInscricaoEvento === "Fiquei curiosa e quero saber mais" ||
       motivoInscricaoEvento === "Influência ou indicação de amiga/parentes.") &&
-    valorDispostoPagar === "Não, no momento não posso investir" &&
+    valorDispostoPagar === "Não estou disposta a investir em minha saúde agora" &&
     (tempoSintomas === "Menos de 3 meses" || tempoSintomas === "Entre 3 a 6 meses") &&
     rendaMensal === "Ganho de 1 a 2 salários mínimos" &&
     tempoMinutos >= 4 &&
@@ -372,7 +371,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     totalSintomasIncomodam <= 1 ||
     (fezReposicao === "Nenhuma" && jaConhecia === "Não conhecia") ||
     rendaMensal === "Ganho de 1 a 2 salários mínimos" ||
-    valorDispostoPagar === "Não, no momento não posso investir" ||
+    valorDispostoPagar === "Não estou disposta a investir em minha saúde agora" ||
     tempoMinutos > 6
 
   if (isB) return "B"
@@ -404,8 +403,8 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     score += 2
   }
 
-  if (valorDispostoPagar === "Sim, mais de R$3.000,00") score += 3
-  else if (valorDispostoPagar === "Sim, entre R$2.000,00 e R$3.000,00") score += 2
+  if (valorDispostoPagar === "Estou disposta a investir qualquer valor para ter minha saúde de volta") score += 3
+  else if (valorDispostoPagar === "Posso investir no maximo R$ 1.000 parcelado") score += 2
 
   if (rendaMensal === "Ganho mais de 3 salários mínimos") {
     score += 2
