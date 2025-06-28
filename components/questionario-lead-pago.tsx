@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea"
 
 import { Heart, CheckCircle, CalendarDays, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useRouter } from "next/navigation"
 
 interface Question {
   id: string
@@ -296,149 +296,103 @@ const questions: Question[] = [
   },
 ]
 
-function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTotalQuestionario: number): string {
-  const principalSintoma = respostas.principal_sintoma?.value as string
-  const outrosSintomasIncomodam = (respostas.outros_sintomas_incomodam?.value as string) || ""
-  const outrosSintomasIncomodamOutro = respostas.outros_sintomas_incomodam_outro?.value as string
-  const intensidadeSintomaPrincipal = respostas.intensidade_sintoma_principal?.value as string
-  const fezReposicao = respostas.fez_reposicao_hormonal?.value
-  const valorDispostoPagar = respostas.valor_disposto_pagar?.value
-  const tempoSintomas = respostas.tempo_sintomas?.value
-  const rendaMensal = respostas.renda_mensal?.value
-  const tempoConhece = respostas.ja_conhecia?.value
-  const compraOnlineExperiencia = respostas.compra_online_experiencia?.value
-  const faseMenopausa = respostas.fase_menopausa?.value
-  const motivoInscricaoEvento = respostas.motivo_inscricao_evento?.value as string
-  const jaConhecia = respostas.ja_conhecia?.value
-  const urgenciaResolver = respostas.urgencia_resolver?.value
-  const impactoSintomasVida = respostas.impacto_sintomas_vida?.value
-  const estadoCivil = respostas.estado_civil?.value
-  const impactoSintomasRelacionamento = respostas.impacto_sintomas_relacionamento?.value
-
-  const totalSintomasIncomodam =
-    (principalSintoma && principalSintoma !== "Nenhum desses" && principalSintoma !== "Outros (especificar)" ? 1 : 0) +
-    (outrosSintomasIncomodam &&
-    outrosSintomasIncomodam !== "Nenhum desses" &&
-    outrosSintomasIncomodam !== "Outros (especificar)"
-      ? 1
-      : 0) +
-    (outrosSintomasIncomodamOutro && outrosSintomasIncomodamOutro.trim().length > 0 ? 1 : 0)
-
-  const tempoMinutos = tempoTotalQuestionario / (1000 * 60)
-
-  const isAAA =
-    intensidadeSintomaPrincipal === "Grave" &&
-    urgenciaResolver === "É prioridade máxima" &&
-    fezReposicao &&
-    fezReposicao !== "Nenhuma" &&
-    valorDispostoPagar === "Estou disposta a investir qualquer valor para ter minha saúde de volta" &&
-    tempoSintomas === "Á mais de 1 ano" &&
-    rendaMensal === "Ganho mais de 3 salários mínimos" &&
-    tempoMinutos < 2
-
-  if (isAAA) return "AAA"
-
-  const isAA =
-    intensidadeSintomaPrincipal === "Moderada" &&
-    urgenciaResolver === "Quero resolver em breve" &&
-    (fezReposicao === "Pesquisas na internet" ||
-      fezReposicao === "Chás / manipulados / remédios caseiros" ||
-      fezReposicao === "Nutricionista") &&
-    valorDispostoPagar === "Posso investir no maximo R$ 1.000 parcelado" &&
-    (tempoSintomas === "Entre 6 meses a 1 ano" || tempoSintomas === "Á mais de 1 ano") &&
-    (rendaMensal === "Ganho de 2 a 3 salários mínimos" || rendaMensal === "Ganho mais de 3 salários mínimos") &&
-    tempoMinutos >= 2 &&
-    tempoMinutos <= 4
-
-  if (isAA) return "AA"
-
-  const isA =
-    intensidadeSintomaPrincipal === "Leve" &&
-    urgenciaResolver === "Posso esperar mais um pouco" &&
-    fezReposicao === "Nenhuma" &&
-    (motivoInscricaoEvento === "Fiquei curiosa e quero saber mais" ||
-      motivoInscricaoEvento === "Influência ou indicação de amiga/parentes.") &&
-    valorDispostoPagar === "Não estou disposta a investir em minha saúde agora" &&
-    (tempoSintomas === "Menos de 3 meses" || tempoSintomas === "Entre 3 a 6 meses") &&
-    rendaMensal === "Ganho de 1 a 2 salários mínimos" &&
-    tempoMinutos >= 4 &&
-    tempoMinutos <= 6
-
-  if (isA) return "A"
-
-  const isB =
-    faseMenopausa === "Não sei / Tenho dúvidas" ||
-    totalSintomasIncomodam <= 1 ||
-    (fezReposicao === "Nenhuma" && jaConhecia === "Não conhecia") ||
-    rendaMensal === "Ganho de 1 a 2 salários mínimos" ||
-    valorDispostoPagar === "Não estou disposta a investir em minha saúde agora" ||
-    tempoMinutos > 6
-
-  if (isB) return "B"
-
-  const isC =
-    (principalSintoma === "Nenhum desses" && outrosSintomasIncomodam.includes("Nenhum desses")) ||
-    compraOnlineExperiencia === "Não" ||
-    !rendaMensal ||
-    tempoMinutos < 0.5 ||
-    tempoMinutos > 15
-
-  if (isC) return "C"
-
+function calculateLeadQualification(respostas: Record<string, Resposta>): string {
   let score = 0
 
-  if (intensidadeSintomaPrincipal === "Grave") score += 5
-  else if (intensidadeSintomaPrincipal === "Moderada") score += 3
-  else if (intensidadeSintomaPrincipal === "Leve") score += 1
-
-  if (urgenciaResolver === "É prioridade máxima") score += 3
-  else if (urgenciaResolver === "Quero resolver em breve") score += 2
-  else if (urgenciaResolver === "Posso esperar mais um pouco") score += 1
-
-  if (fezReposicao && fezReposicao !== "Nenhuma") {
-    score += 2
+  // 1. Intensidade do Sintoma Principal
+  const intensidadeSintomaPrincipal = respostas.intensidade_sintoma_principal?.value as string
+  if (intensidadeSintomaPrincipal === "Grave") {
+    score += 5
+  } else if (intensidadeSintomaPrincipal === "Moderada") {
+    score += 3
+  } else if (intensidadeSintomaPrincipal === "Leve") {
+    score += 1
   }
 
+  // 2. Frequência do Sintoma (Critério não implementado por falta de pergunta específica)
+  // Para implementar, seria necessário adicionar uma pergunta como "Com que frequência você sente os sintomas?"
+  // com opções como "Todos os dias", "De vez em quando", "Raramente".
+
+  // 3. Impacto Emocional ou Relacional
+  const impactoVida = respostas.impacto_sintomas_vida?.value as string
+  const impactoRelacionamento = respostas.impacto_sintomas_relacionamento?.value as string
+
+  if (
+    impactoVida === "Extremamente - compromete muito minha qualidade de vida" ||
+    impactoVida === "Significativamente - interfere bastante no meu dia a dia" ||
+    impactoRelacionamento === "Extremamente - está prejudicando muito o relacionamento" ||
+    impactoRelacionamento === "Significativamente - afeta bastante nossa intimidade"
+  ) {
+    score += 4
+  } else if (
+    impactoVida === "Moderadamente - às vezes atrapalha algumas atividades" ||
+    impactoRelacionamento === "Moderadamente - às vezes causa alguns problemas"
+  ) {
+    score += 2
+  }
+  // Else, 0 points
+
+  // 4. Tentativas Anteriores
+  const fezReposicaoHormonal = respostas.fez_reposicao_hormonal?.value as string
+  if (
+    fezReposicaoHormonal === "Ginecologista" ||
+    fezReposicaoHormonal === "Nutricionista" ||
+    fezReposicaoHormonal === "Reposição hormonal"
+  ) {
+    score += 3
+  } else if (
+    fezReposicaoHormonal === "Chás / manipulados / remédios caseiros" ||
+    fezReposicaoHormonal === "Pesquisas na internet"
+  ) {
+    score += 1
+  }
+  // Else, 0 points
+
+  // 5. Tempo Sentindo os Sintomas
+  const tempoSintomas = respostas.tempo_sintomas?.value as string
   if (tempoSintomas === "Á mais de 1 ano") {
+    score += 3
+  } else if (tempoSintomas === "Entre 6 meses a 1 ano") {
     score += 2
-  }
-
-  if (valorDispostoPagar === "Estou disposta a investir qualquer valor para ter minha saúde de volta") score += 3
-  else if (valorDispostoPagar === "Posso investir no maximo R$ 1.000 parcelado") score += 2
-
-  if (rendaMensal === "Ganho mais de 3 salários mínimos") {
-    score += 2
-  } else if (rendaMensal === "Ganho de 2 a 3 salários mínimos") {
+  } else if (tempoSintomas === "Entre 3 a 6 meses" || tempoSintomas === "Menos de 3 meses") {
     score += 1
   }
 
-  if (tempoMinutos <= 2) {
-    score += 1
-  }
+  // 6. Desejo de Solução
+  const valorDispostoPagar = respostas.valor_disposto_pagar?.value as string
+  const motivoInscricaoEvento = respostas.motivo_inscricao_evento?.value as string
 
   if (
-    jaConhecia === "Sim, mais de 3 meses" ||
-    jaConhecia === "Sim, de 6 meses a 1 ano" ||
-    jaConhecia === "Sim, entre 2 a 3 anos"
+    valorDispostoPagar === "Estou disposta a investir qualquer valor para ter minha saúde de volta" ||
+    valorDispostoPagar === "Posso investir no maximo R$ 1.000 parcelado"
+  ) {
+    score += 4
+  } else if (motivoInscricaoEvento === "Fiquei curiosa e quero saber mais") {
+    score += 2
+  }
+  // Else, 0 points
+
+  // 7. Interesse no Evento
+  // Note: "Fiquei curiosa e quero saber mais" já contribui para "Desejo de Solução" com +2.
+  // Aqui, ele também contribuirá com +1 para "Interesse no Evento", somando um total de +3 para essa resposta.
+  if (
+    motivoInscricaoEvento === "Quero resolver meus sintomas" ||
+    motivoInscricaoEvento === "Acredito muito nesse método eficaz da Dra"
+  ) {
+    score += 3
+  } else if (
+    motivoInscricaoEvento === "Fiquei curiosa e quero saber mais" ||
+    motivoInscricaoEvento === "Influência ou indicação de amiga/parentes."
   ) {
     score += 1
   }
+  // Else, 0 points
 
-  if (rendaMensal === "Ganho de 1 a 2 salários mínimos" || rendaMensal === "Prefiro não informar") {
-    score -= 2
-  }
-
-  if (
-    impactoSintomasRelacionamento === "Significativamente - afeta bastante nossa intimidade" ||
-    impactoSintomasRelacionamento === "Extremamente - está prejudicando muito o relacionamento"
-  ) {
-    score += 2
-  }
-
-  if (score >= 12) return "AAA"
-  if (score >= 9) return "AA"
-  if (score >= 6) return "A"
-  if (score >= 3) return "B"
+  // Classificação Final
+  if (score >= 18) return "AAA"
+  if (score >= 14) return "AA"
+  if (score >= 10) return "A"
+  if (score >= 6) return "B"
   return "C"
 }
 
@@ -500,16 +454,6 @@ function calculateQuestionPoints(questionId: string, answer: string | string[]):
   }
 
   return pointsMap[questionId]?.[answer as string] || 1
-}
-
-function calculateTotalScore(respostas: Record<string, Resposta>): number {
-  let totalScore = 0
-
-  Object.entries(respostas).forEach(([questionId, resposta]) => {
-    totalScore += calculateQuestionPoints(questionId, resposta.value)
-  })
-
-  return totalScore
 }
 
 async function enviarParaMakeWebhook(data: any): Promise<{ success: boolean; message: string }> {
@@ -581,6 +525,21 @@ async function enviarParaActiveCampaign(data: any): Promise<{ success: boolean; 
     console.error("Erro ao enviar para Active Campaign:", error)
     return { success: false, message: `Erro: ${error.message}` }
   }
+}
+
+function calculateTotalScore(respostas: Record<string, Resposta>): number {
+  let totalScore = 0
+
+  for (const questionId in respostas) {
+    if (respostas.hasOwnProperty(questionId)) {
+      const resposta = respostas[questionId]
+      if (resposta) {
+        totalScore += calculateQuestionPoints(questionId, resposta.value)
+      }
+    }
+  }
+
+  return totalScore
 }
 
 export default function QuestionarioLeadPago() {
@@ -719,7 +678,7 @@ export default function QuestionarioLeadPago() {
     })
 
     const tempoMedioResposta = questions.length > 0 ? Math.round(totalTempoResposta / questions.length) : 0
-    const qualificacaoLead = calculateLeadQualification(respostas, tempoTotalQuestionario)
+    const qualificacaoLead = calculateLeadQualification(respostas) // Updated to use new scoring
     const saudeReport = generateHealthReport(respostas)
 
     const principalSintoma = formattedRespostas.principal_sintoma as string
