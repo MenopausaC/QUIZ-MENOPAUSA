@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 export async function POST(request: Request) {
   try {
     console.log("🎯 Webhook recebeu uma requisição")
+    console.log("🕐 Timestamp:", new Date().toISOString())
 
     // Obter os dados do corpo da requisição
     const dados = await request.json()
@@ -44,16 +45,46 @@ export async function POST(request: Request) {
     const respostas = leadData.respostas || dados.respostas || leadData.respostas_detalhadas || {}
     const qualificacaoLead = leadData.qualificacaoLead || dados.qualificacaoLead || {}
 
-    // Registrar os dados em um log
-    console.log("✅ Dados processados no webhook:", {
-      nome,
-      email,
-      telefone,
-      idade,
-      categoria: analise?.categoria || leadData.categoria_sintomas || "N/A",
-      qualificacao: qualificacaoLead?.categoria || leadData.categoria_lead || "N/A",
+    // Verificar se temos as novas opções da pergunta 12
+    const valorDispostoPagar = leadData.valor_disposto_pagar || dados.valor_disposto_pagar
+    console.log("💰 Valor disposto a pagar:", valorDispostoPagar)
+
+    // Validar se é uma das novas opções
+    const novasOpcoes = [
+      "Sim, mais de R$3.000,00",
+      "Sim, entre R$2.000,00 e R$3.000,00",
+      "Sim, entre R$1.000,00 e R$2.000,00",
+      "Não, no momento não posso investir",
+    ]
+
+    if (valorDispostoPagar && !novasOpcoes.includes(valorDispostoPagar)) {
+      console.log("⚠️ Valor disposto não está nas novas opções:", valorDispostoPagar)
+    } else {
+      console.log("✅ Valor disposto validado:", valorDispostoPagar)
+    }
+
+    // Registrar os dados em um log estruturado
+    const logData = {
       timestamp: new Date().toISOString(),
-    })
+      dados_processados: {
+        nome,
+        email,
+        telefone,
+        idade,
+        categoria: analise?.categoria || leadData.categoria_sintomas || "N/A",
+        qualificacao: qualificacaoLead?.categoria || leadData.categoria_lead || leadData.qualificacao_lead || "N/A",
+        valor_disposto_pagar: valorDispostoPagar || "N/A",
+        tipo_questionario: leadData.tipo_questionario || "N/A",
+        origem: leadData.origem || "N/A",
+      },
+      metadados: {
+        user_agent: request.headers.get("user-agent"),
+        ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip"),
+        content_length: request.headers.get("content-length"),
+      },
+    }
+
+    console.log("📊 Log estruturado:", JSON.stringify(logData, null, 2))
 
     // Aqui você pode processar os dados antes de enviá-los para o CRM
     // Por exemplo, formatar os dados, adicionar informações adicionais, etc.
@@ -72,34 +103,56 @@ export async function POST(request: Request) {
           respostas: respostas,
           pontuacao: analise?.pontuacaoTotal || leadData.pontuacao_total,
           categoria: analise?.categoria || leadData.categoria_sintomas,
-          qualificacao: qualificacaoLead?.categoria || leadData.categoria_lead,
+          qualificacao: qualificacaoLead?.categoria || leadData.categoria_lead || leadData.qualificacao_lead,
           prioridade: qualificacaoLead?.prioridade || leadData.prioridade,
+          valor_disposto_pagar: valorDispostoPagar,
           sintomas: analise?.sintomas
             ? analise.sintomas.map((s: any) => s.nome).join(", ")
             : leadData.sintomas_identificados
               ? leadData.sintomas_identificados.map((s: any) => s.nome).join(", ")
               : "",
           timestamp: dados.timestamp || new Date().toISOString(),
-          origem: "questionario-menopausa",
+          origem: leadData.origem || "questionario-menopausa",
+          tipo_questionario: leadData.tipo_questionario || "ORGANICO",
+          versao_questionario: leadData.versao_questionario || "3.4",
         }
 
-        console.log("📤 Enviando dados para CRM:", crmData)
+        console.log("📤 Enviando dados para CRM:", JSON.stringify(crmData, null, 2))
 
-        // Enviar dados para o CRM
-        const crmResponse = await fetch(crmUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.CRM_API_KEY || ""}`,
-          },
-          body: JSON.stringify(crmData),
-        })
+        // Enviar dados para o CRM com retry logic
+        let crmResponse
+        let attempts = 0
+        const maxAttempts = 3
 
-        if (!crmResponse.ok) {
-          console.error("❌ Erro ao enviar para CRM:", await crmResponse.text())
-          // Ainda retornamos sucesso para o cliente, mas logamos o erro
-        } else {
-          console.log("✅ Dados enviados com sucesso para o CRM")
+        while (attempts < maxAttempts) {
+          try {
+            crmResponse = await fetch(crmUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${process.env.CRM_API_KEY || ""}`,
+              },
+              body: JSON.stringify(crmData),
+            })
+
+            if (crmResponse.ok) {
+              console.log("✅ Dados enviados com sucesso para o CRM")
+              break
+            } else {
+              throw new Error(`HTTP ${crmResponse.status}: ${await crmResponse.text()}`)
+            }
+          } catch (error) {
+            attempts++
+            console.error(`❌ Tentativa ${attempts} falhou:`, error)
+
+            if (attempts >= maxAttempts) {
+              console.error("❌ Todas as tentativas de envio para CRM falharam")
+              // Ainda retornamos sucesso para o cliente, mas logamos o erro
+            } else {
+              // Aguardar antes da próxima tentativa
+              await new Promise((resolve) => setTimeout(resolve, 1000 * attempts))
+            }
+          }
         }
       } catch (error) {
         console.error("❌ Erro na integração com CRM:", error)
@@ -123,11 +176,21 @@ export async function POST(request: Request) {
         telefone,
         idade,
         categoria: analise?.categoria,
-        qualificacao: qualificacaoLead?.categoria,
+        qualificacao: qualificacaoLead?.categoria || leadData.qualificacao_lead,
+        valor_disposto_pagar: valorDispostoPagar,
+        tipo_questionario: leadData.tipo_questionario,
       },
     })
   } catch (error) {
     console.error("❌ Erro ao processar webhook:", error)
+
+    // Log detalhado do erro
+    console.error("❌ Stack trace:", (error as Error).stack)
+    console.error("❌ Error details:", {
+      name: (error as Error).name,
+      message: (error as Error).message,
+      timestamp: new Date().toISOString(),
+    })
 
     // Retornar uma resposta de erro
     return NextResponse.json(
@@ -135,7 +198,8 @@ export async function POST(request: Request) {
         success: false,
         message: "Erro ao processar os dados",
         error: (error as Error).message,
-        stack: (error as Error).stack,
+        timestamp: new Date().toISOString(),
+        error_type: (error as Error).name,
       },
       { status: 500 },
     )
