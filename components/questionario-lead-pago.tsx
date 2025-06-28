@@ -211,9 +211,9 @@ const questions: Question[] = [
     textInitial2: "esse problema?",
     emoji: "💸",
     options: [
-      "Sim, estou disposta a investir em um tratamento personalizado",
-      "Sim, mas no máximo até R$99 por mês",
-      "Não, prefiro seguir com opções gratuitas e sozinha",
+      "Estou disposta a investir mais de 2.000 reais para acabar com meus sintomas",
+      "Posso investir no máximo 1000 reais parcelado",
+      "Não estou disposta a investir agora em minha saude",
     ],
   },
   {
@@ -331,7 +331,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     urgenciaResolver === "É prioridade máxima" &&
     fezReposicao &&
     fezReposicao !== "Nenhuma" &&
-    valorDispostoPagar === "Sim, estou disposta a investir em um tratamento personalizado" &&
+    valorDispostoPagar === "Estou disposta a investir mais de 2.000 reais para acabar com meus sintomas" &&
     tempoSintomas === "Á mais de 1 ano" &&
     rendaMensal === "Ganho mais de 3 salários mínimos" &&
     tempoMinutos < 2
@@ -344,7 +344,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     (fezReposicao === "Pesquisas na internet" ||
       fezReposicao === "Chás / manipulados / remédios caseiros" ||
       fezReposicao === "Nutricionista") &&
-    valorDispostoPagar === "Sim, mas no máximo até R$99 por mês" &&
+    valorDispostoPagar === "Posso investir no máximo 1000 reais parcelado" &&
     (tempoSintomas === "Entre 6 meses a 1 ano" || tempoSintomas === "Á mais de 1 ano") &&
     (rendaMensal === "Ganho de 2 a 3 salários mínimos" || rendaMensal === "Ganho mais de 3 salários mínimos") &&
     tempoMinutos >= 2 &&
@@ -358,7 +358,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     fezReposicao === "Nenhuma" &&
     (motivoInscricaoEvento === "Fiquei curiosa e quero saber mais" ||
       motivoInscricaoEvento === "Influência ou indicação de amiga/parentes.") &&
-    valorDispostoPagar === "Não, prefiro seguir com opções gratuitas e sozinha" &&
+    valorDispostoPagar === "Não estou disposta a investir agora em minha saude" &&
     (tempoSintomas === "Menos de 3 meses" || tempoSintomas === "Entre 3 a 6 meses") &&
     rendaMensal === "Ganho de 1 a 2 salários mínimos" &&
     tempoMinutos >= 4 &&
@@ -371,7 +371,7 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     totalSintomasIncomodam <= 1 ||
     (fezReposicao === "Nenhuma" && jaConhecia === "Não conhecia") ||
     rendaMensal === "Ganho de 1 a 2 salários mínimos" ||
-    valorDispostoPagar === "Não, prefiro seguir com opções gratuitas e sozinha" ||
+    valorDispostoPagar === "Não estou disposta a investir agora em minha saude" ||
     tempoMinutos > 6
 
   if (isB) return "B"
@@ -403,8 +403,8 @@ function calculateLeadQualification(respostas: Record<string, Resposta>, tempoTo
     score += 2
   }
 
-  if (valorDispostoPagar === "Sim, estou disposta a investir em um tratamento personalizado") score += 3
-  else if (valorDispostoPagar === "Sim, mas no máximo até R$99 por mês") score += 2
+  if (valorDispostoPagar === "Estou disposta a investir mais de 2.000 reais para acabar com meus sintomas") score += 3
+  else if (valorDispostoPagar === "Posso investir no máximo 1000 reais parcelado") score += 2
 
   if (rendaMensal === "Ganho mais de 3 salários mínimos") {
     score += 2
@@ -795,15 +795,15 @@ export default function QuestionarioLeadPago() {
       tempo_total_questionario_segundos: Math.round(tempoTotalQuestionario / 1000),
       tempo_total_questionario_minutos: Math.round(tempoTotalQuestionario / (1000 * 60)),
       tempo_medio_resposta_ms: tempoMedioResposta,
-      tempo_medio_resposta_segundos: Math.Round(tempoMedioResposta / 1000),
+      tempo_medio_resposta_segundos: Math.round(tempoMedioResposta / 1000),
       pergunta_mais_lenta_id: perguntaMaisLenta.id,
       pergunta_mais_lenta_texto: perguntaMaisLenta.texto,
       pergunta_mais_lenta_tempo_ms: perguntaMaisLenta.tempo,
-      pergunta_mais_lenta_tempo_segundos: Math.Round(perguntaMaisLenta.tempo / 1000),
+      pergunta_mais_lenta_tempo_segundos: Math.round(perguntaMaisLenta.tempo / 1000),
 
       total_perguntas: questions.length,
       perguntas_respondidas: Object.keys(respostas).length,
-      taxa_completude: Math.Round((Object.keys(respostas).length / questions.length) * 100),
+      taxa_completude: Math.round((Object.keys(respostas).length / questions.length) * 100),
       voltas_perguntas: 0,
       hesitacao_perguntas: [],
       engajamento: tempoTotalQuestionario < 120000 ? "ALTO" : tempoTotalQuestionario < 300000 ? "MEDIO" : "BAIXO",
