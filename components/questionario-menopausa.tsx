@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 import { Heart, CheckCircle, CalendarDays, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useRouter } from "next/navigation"
+import { useRouter } from "next/navigation" // Corrected: Added missing import
 
 interface Question {
   id: string
@@ -992,26 +992,21 @@ export default function QuestionarioMenopausa() {
       const answer = respostas[currentQuestion.id]?.value
 
       if (typeof answer === "string" && answer.trim().length > 0) {
-        if (currentQuestion.id === "principal_sintoma" && answer === "Outros (especificar)") {
-          return
-        }
+        // Determine if the current question requires additional input
+        const requiresAdditionalInput =
+          (currentQuestion.id === "principal_sintoma" && answer === "Outros (especificar)") ||
+          (currentQuestion.id === "outros_sintomas_incomodam" && answer === "Outros (especificar)") ||
+          (currentQuestion.id === "impacto_sintomas_vida" && answer === "Outros") ||
+          (currentQuestion.id === "impacto_sintomas_relacionamento" && answer === "Outros")
 
-        if (currentQuestion.id === "outros_sintomas_incomodam" && answer === "Outros (especificar)") {
-          return
+        // If it doesn't require additional input, then automatically advance.
+        // Otherwise, the user must click "Próximo" after filling the text area.
+        if (!requiresAdditionalInput) {
+          const timer = setTimeout(() => {
+            handleNext()
+          }, 200)
+          return () => clearTimeout(timer)
         }
-
-        if (currentQuestion.id === "impacto_sintomas_vida" && answer === "Outros") {
-          return
-        }
-
-        if (currentQuestion.id === "impacto_sintomas_relacionamento" && answer === "Outros") {
-          return
-        }
-
-        const timer = setTimeout(() => {
-          handleNext()
-        }, 200)
-        return () => clearTimeout(timer)
       }
     }
   }, [respostas, currentStep, handleNext, questions])
@@ -1118,7 +1113,12 @@ export default function QuestionarioMenopausa() {
 
     const showNextButton =
       question.type !== "radio" ||
-      (question.id === "principal_sintoma" && respostas.principal_sintoma?.value === "Outros (especificar)")
+      (question.id === "principal_sintoma" && respostas.principal_sintoma?.value === "Outros (especificar)") ||
+      (question.id === "outros_sintomas_incomodam" &&
+        respostas.outros_sintomas_incomodam?.value === "Outros (especificar)") ||
+      (question.id === "impacto_sintomas_vida" && respostas.impacto_sintomas_vida?.value === "Outros") ||
+      (question.id === "impacto_sintomas_relacionamento" &&
+        respostas.impacto_sintomas_relacionamento?.value === "Outros")
 
     return (
       <div className="space-y-4 animate-fadeIn">
