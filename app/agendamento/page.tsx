@@ -1,382 +1,361 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { format, addDays, getDay, isBefore, startOfDay } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import { Calendar, Clock, User, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react'
-import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Calendar, Clock, User, Phone, Mail, ChevronLeft, ChevronRight, Check } from 'lucide-react'
+import { toast } from 'sonner'
 
-// Horários disponíveis
-const AVAILABLE_TIMES = [
-  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-  '11:00', '11:30', '14:00', '14:30', '15:00', '15:30',
-  '16:00', '16:30', '17:00', '17:30'
-]
-
-interface FormData {
-  nome: string
-  whatsapp: string
-  data: string
-  horario: string
+interface TimeSlot {
+  time: string
+  available: boolean
 }
 
 export default function AgendamentoPage() {
-  const [currentStep, setCurrentStep] = useState(1)
+  const [step, setStep] = useState(1)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [selectedTime, setSelectedTime] = useState<string>("")
-  const [formData, setFormData] = useState<FormData>({
-    nome: "",
-    whatsapp: "",
-    data: "",
-    horario: ""
-  })
-  const [loading, setLoading] = useState(false)
+  const [selectedTime, setSelectedTime] = useState<string>('')
   const [currentMonth, setCurrentMonth] = useState(new Date())
-  const { toast } = useToast()
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    nome: '',
+    telefone: '',
+    email: '',
+    observacoes: ''
+  })
 
-  // Gerar próximos 30 dias úteis (segunda a sexta)
-  const getAvailableDates = () => {
-    const dates = []
-    let currentDate = new Date()
-    let count = 0
-    
-    while (count < 30) {
-      const dayOfWeek = getDay(currentDate)
-      // Segunda a sexta (1-5)
-      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-        dates.push(new Date(currentDate))
-        count++
-      }
-      currentDate = addDays(currentDate, 1)
+  const timeSlots = [
+    '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
+    '11:00', '11:30', '14:00', '14:30', '15:00', '15:30',
+    '16:00', '16:30', '17:00', '17:30'
+  ]
+
+  useEffect(() => {
+    if (selectedDate) {
+      fetchAvailableSlots(selectedDate)
     }
-    
-    return dates
+  }, [selectedDate])
+
+  const fetchAvailableSlots = async (date: Date) => {
+    try {
+      const dateStr = date.toISOString().split('T')[0]
+      const response = await fetch(`/api/agendamentos?date=${dateStr}`)
+      
+      if (response.ok) {
+        const appointments = await response.json()
+        const bookedTimes = appointments.map((apt: any) => apt.horario)
+        
+        const slots = timeSlots.map(time => ({
+          time,
+          available: !bookedTimes.includes(time)
+        }))
+        
+        setAvailableSlots(slots)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar horários:', error)
+    }
   }
 
-  // Filtrar datas do mês atual
-  const getMonthDates = () => {
-    const allDates = getAvailableDates()
-    return allDates.filter(date => 
-      date.getMonth() === currentMonth.getMonth() && 
-      date.getFullYear() === currentMonth.getFullYear()
-    )
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const daysInMonth = lastDay.getDate()
+    const startingDayOfWeek = firstDay.getDay()
+    
+    const days = []
+    
+    // Ajustar para começar na segunda-feira
+    const mondayStartOffset = startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1
+    for (let i = 0; i < mondayStartOffset; i++) {
+      days.push(null)
+    }
+    
+    // Adicionar todos os dias do mês
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day)
+      const dayOfWeek = date.getDay()
+      // Apenas adicionar dias úteis (Segunda a Sábado)
+      if (dayOfWeek >= 1 && dayOfWeek <= 6) {
+        days.push(date)
+      }
+    }
+    
+    return days
+  }
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev)
+      if (direction === 'prev') {
+        newMonth.setMonth(prev.getMonth() - 1)
+      } else {
+        newMonth.setMonth(prev.getMonth() + 1)
+      }
+      return newMonth
+    })
   }
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date)
-    setFormData(prev => ({
-      ...prev,
-      data: format(date, "yyyy-MM-dd")
-    }))
-    // Avançar automaticamente para próxima etapa
-    setTimeout(() => setCurrentStep(2), 300)
+    setSelectedTime('')
+    setStep(2)
   }
 
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time)
-    setFormData(prev => ({
-      ...prev,
-      horario: time
-    }))
-    // Avançar automaticamente para próxima etapa
-    setTimeout(() => setCurrentStep(3), 300)
+    setStep(3)
   }
 
   const handleInputChange = (field: string, value: string) => {
-    if (field === 'whatsapp') {
-      // Aplicar máscara do WhatsApp
-      const cleaned = value.replace(/\D/g, '')
-      let formatted = cleaned
-      
-      if (cleaned.length >= 11) {
-        formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
-      } else if (cleaned.length >= 7) {
-        formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`
-      } else if (cleaned.length >= 3) {
-        formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
-      } else if (cleaned.length >= 1) {
-        formatted = `(${cleaned}`
-      }
-      
-      setFormData(prev => ({ ...prev, [field]: formatted }))
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }))
-    }
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = async () => {
-    if (!formData.nome || !formData.whatsapp || !formData.data || !formData.horario) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos",
-        variant: "destructive",
-      })
-      return
+  const formatPhoneNumber = (value: string) => {
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length <= 11) {
+      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
     }
+    return value
+  }
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value)
+    handleInputChange('telefone', formatted)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     setLoading(true)
 
     try {
-      console.log('📤 Enviando dados do agendamento:', formData)
+      const appointmentData = {
+        ...formData,
+        data_agendamento: selectedDate?.toISOString().split('T')[0],
+        horario: selectedTime,
+        status: 'pendente'
+      }
 
-      // Enviar para webhook
-      const webhookResponse = await fetch('/api/save-questionario', {
+      const response = await fetch('/api/agendamentos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          tipo: 'agendamento',
-          nome_completo: formData.nome,
-          whatsapp: formData.whatsapp,
-          data_agendamento: formData.data,
-          horario_agendamento: formData.horario,
-          status: 'aguardando_pagamento',
-          tipo_consulta: 'Consulta online de 30 minutos com especialista em menopausa',
-          timestamp: new Date().toISOString()
-        })
+        body: JSON.stringify(appointmentData),
       })
 
-      if (webhookResponse.ok) {
-        console.log('✅ Agendamento enviado com sucesso')
-        
-        // Redirecionar para pagamento
-        window.location.href = 'https://pay.hub.la/29aC1Gnpnjaf1HXV4JPF'
+      if (response.ok) {
+        toast.success('Agendamento realizado com sucesso!')
+        // Redirecionar para página de pagamento
+        window.location.href = '/pagamento-confirmado'
       } else {
-        throw new Error('Falha no envio do agendamento')
+        throw new Error('Erro ao criar agendamento')
       }
-
     } catch (error) {
-      console.error('❌ Erro ao enviar agendamento:', error)
-      toast({
-        title: "Erro",
-        description: "Falha ao processar agendamento. Tente novamente.",
-        variant: "destructive",
-      })
+      console.error('Erro ao criar agendamento:', error)
+      toast.error('Erro ao realizar agendamento')
     } finally {
       setLoading(false)
     }
   }
 
-  const handlePreviousMonth = () => {
-    const newMonth = new Date(currentMonth)
-    newMonth.setMonth(currentMonth.getMonth() - 1)
-    setCurrentMonth(newMonth)
-  }
-
-  const handleNextMonth = () => {
-    const newMonth = new Date(currentMonth)
-    newMonth.setMonth(currentMonth.getMonth() + 1)
-    setCurrentMonth(newMonth)
-  }
-
-  const monthDates = getMonthDates()
+  const days = getDaysInMonth(currentMonth)
+  const weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-8">
+      <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Agende sua Consulta</h1>
-          <p className="text-gray-600">Consulta online de 30 minutos com especialista em menopausa</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Agendar Consulta
+          </h1>
+          <p className="text-gray-600">
+            Escolha a data e horário para sua consulta
+          </p>
         </div>
 
-        {/* Progress Indicator */}
+        {/* Indicador de Progresso */}
         <div className="flex items-center justify-center mb-8">
           <div className="flex items-center space-x-4">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-              currentStep >= 1 ? 'bg-pink-500 text-white' : 'bg-gray-200 text-gray-500'
-            }`}>
-              <Calendar className="h-5 w-5" />
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 1 ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}>
+              {step > 1 ? <Check className="h-4 w-4" /> : '1'}
             </div>
-            <div className={`h-1 w-16 ${currentStep >= 2 ? 'bg-pink-500' : 'bg-gray-200'}`}></div>
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-              currentStep >= 2 ? 'bg-pink-500 text-white' : 'bg-gray-200 text-gray-500'
-            }`}>
-              <Clock className="h-5 w-5" />
+            <div className={`h-1 w-16 ${step >= 2 ? 'bg-purple-600' : 'bg-gray-200'}`}></div>
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 2 ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}>
+              {step > 2 ? <Check className="h-4 w-4" /> : '2'}
             </div>
-            <div className={`h-1 w-16 ${currentStep >= 3 ? 'bg-pink-500' : 'bg-gray-200'}`}></div>
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-              currentStep >= 3 ? 'bg-pink-500 text-white' : 'bg-gray-200 text-gray-500'
-            }`}>
-              <User className="h-5 w-5" />
+            <div className={`h-1 w-16 ${step >= 3 ? 'bg-purple-600' : 'bg-gray-200'}`}></div>
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 3 ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}>
+              3
             </div>
           </div>
         </div>
 
-        {/* Step 1: Date Selection */}
-        {currentStep === 1 && (
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader className="text-center">
-              <CardTitle className="flex items-center justify-center space-x-2">
-                <Calendar className="h-6 w-6 text-pink-500" />
-                <span>Escolha a Data da Consulta</span>
+        {/* Etapa 1: Seleção de Data */}
+        {step === 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Escolha uma Data
               </CardTitle>
-              <p className="text-gray-600">Selecione o dia que melhor se adequa à sua agenda</p>
             </CardHeader>
             <CardContent>
-              {/* Navegação do mês */}
-              <div className="flex items-center justify-between mb-6 p-4 bg-gray-100 rounded-lg">
-                <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
+              <div className="flex items-center justify-between mb-6">
+                <Button variant="outline" onClick={() => navigateMonth('prev')}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <h3 className="text-lg font-semibold">
-                  {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+                <h3 className="text-xl font-semibold">
+                  {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                 </h3>
-                <Button variant="outline" size="icon" onClick={handleNextMonth}>
+                <Button variant="outline" onClick={() => navigateMonth('next')}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
 
-              {/* Grid de datas */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {monthDates.map((date) => (
-                  <Card
-                    key={date.toISOString()}
-                    className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-pink-300"
-                    onClick={() => handleDateSelect(date)}
-                  >
-                    <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-gray-800">
-                        {format(date, "dd")}
-                      </div>
-                      <div className="text-sm text-gray-600 capitalize">
-                        {format(date, "EEE", { locale: ptBR })}
-                      </div>
-                    </CardContent>
-                  </Card>
+              <div className="grid grid-cols-6 gap-2 mb-4">
+                {weekDays.map(day => (
+                  <div key={day} className="p-2 text-center font-medium text-gray-600">
+                    {day}
+                  </div>
                 ))}
               </div>
 
-              <div className="text-center mt-6 text-sm text-gray-500">
-                <Calendar className="h-4 w-4 inline mr-2" />
-                Atendemos de segunda a sexta-feira
+              <div className="grid grid-cols-6 gap-2">
+                {days.map((day, index) => {
+                  if (!day) {
+                    return <div key={index} className="p-2 h-12"></div>
+                  }
+
+                  const isToday = day.toDateString() === new Date().toDateString()
+                  const isPast = day < new Date()
+
+                  return (
+                    <Button
+                      key={index}
+                      variant={isToday ? "default" : "outline"}
+                      className={`h-12 ${isPast ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-50'}`}
+                      onClick={() => !isPast && handleDateSelect(day)}
+                      disabled={isPast}
+                    >
+                      {day.getDate()}
+                    </Button>
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Step 2: Time Selection */}
-        {currentStep === 2 && (
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader className="text-center">
-              <CardTitle className="flex items-center justify-center space-x-2">
-                <Clock className="h-6 w-6 text-pink-500" />
-                <span>Escolha o Horário</span>
+        {/* Etapa 2: Seleção de Horário */}
+        {step === 2 && selectedDate && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Escolha um Horário
               </CardTitle>
-              <p className="text-gray-600">
-                Selecione o melhor horário para {selectedDate && format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+              <p className="text-sm text-gray-600">
+                Data selecionada: {selectedDate.toLocaleDateString('pt-BR')}
               </p>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-center mb-6">
-                <Button variant="outline" onClick={() => setCurrentStep(1)}>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar
-                </Button>
-                <Badge variant="outline" className="text-pink-600 border-pink-200">
-                  {selectedDate && format(selectedDate, "dd/MM/yyyy")}
-                </Badge>
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                {availableSlots.map((slot) => (
+                  <Button
+                    key={slot.time}
+                    variant={slot.available ? "outline" : "secondary"}
+                    className={`h-12 ${!slot.available ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-50'}`}
+                    onClick={() => slot.available && handleTimeSelect(slot.time)}
+                    disabled={!slot.available}
+                  >
+                    {slot.time}
+                  </Button>
+                ))}
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {AVAILABLE_TIMES.map((time) => (
-                  <Card
-                    key={time}
-                    className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-pink-300"
-                    onClick={() => handleTimeSelect(time)}
-                  >
-                    <CardContent className="p-4 text-center">
-                      <Clock className="h-5 w-5 mx-auto mb-2 text-pink-500" />
-                      <div className="font-semibold text-gray-800">{time}</div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="flex gap-2 mt-6">
+                <Button variant="outline" onClick={() => setStep(1)}>
+                  Voltar
+                </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Step 3: Personal Information */}
-        {currentStep === 3 && (
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader className="text-center">
-              <CardTitle className="flex items-center justify-center space-x-2">
-                <User className="h-6 w-6 text-pink-500" />
-                <span>Confirme seus Dados</span>
+        {/* Etapa 3: Dados Pessoais */}
+        {step === 3 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Seus Dados
               </CardTitle>
-              <p className="text-gray-600">Últimas informações para finalizar seu agendamento</p>
+              <div className="flex gap-4 text-sm text-gray-600">
+                <span>📅 {selectedDate?.toLocaleDateString('pt-BR')}</span>
+                <span>🕐 {selectedTime}</span>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-center mb-6">
-                <Button variant="outline" onClick={() => setCurrentStep(2)}>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar
-                </Button>
-              </div>
-
-              {/* Resumo do Agendamento */}
-              <Card className="mb-6 bg-gray-50">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center space-x-2">
-                    <Calendar className="h-5 w-5 text-pink-500" />
-                    <span>Resumo do Agendamento</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center">
-                      <Calendar className="h-8 w-8 text-pink-500 mx-auto mb-2" />
-                      <div className="font-semibold">Data</div>
-                      <div className="text-gray-600">
-                        {selectedDate && format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <Clock className="h-8 w-8 text-pink-500 mx-auto mb-2" />
-                      <div className="font-semibold">Horário</div>
-                      <div className="text-gray-600">{selectedTime}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Formulário */}
-              <div className="space-y-4">
-                <div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
                   <Label htmlFor="nome">Nome Completo *</Label>
                   <Input
                     id="nome"
-                    placeholder="Seu nome completo"
                     value={formData.nome}
                     onChange={(e) => handleInputChange('nome', e.target.value)}
+                    required
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="whatsapp">WhatsApp *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="telefone">Telefone/WhatsApp *</Label>
                   <Input
-                    id="whatsapp"
+                    id="telefone"
+                    value={formData.telefone}
+                    onChange={handlePhoneChange}
                     placeholder="(11) 99999-9999"
-                    value={formData.whatsapp}
-                    onChange={(e) => handleInputChange('whatsapp', e.target.value)}
-                    maxLength={15}
+                    required
                   />
                 </div>
 
-                <Button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="w-full bg-pink-500 hover:bg-pink-600 text-white py-3 text-lg"
-                >
-                  {loading ? "Processando..." : "Finalizar Agendamento"}
-                </Button>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="observacoes">Observações</Label>
+                  <Textarea
+                    id="observacoes"
+                    value={formData.observacoes}
+                    onChange={(e) => handleInputChange('observacoes', e.target.value)}
+                    placeholder="Alguma observação importante..."
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setStep(2)}>
+                    Voltar
+                  </Button>
+                  <Button type="submit" disabled={loading} className="flex-1">
+                    {loading ? 'Agendando...' : 'Confirmar Agendamento'}
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
         )}
