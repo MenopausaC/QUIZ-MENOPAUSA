@@ -1,114 +1,97 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const tipo = searchParams.get("tipo")
+    console.log("🔄 [API] Buscando dados do dashboard...")
 
-    // Buscar todos os agendamentos (que agora incluem leads e agendamentos)
-    let query = supabase
+    // Buscar agendamentos
+    const { data: agendamentos, error: agendamentosError } = await supabase
       .from("agendamentos")
       .select("*")
       .order("created_at", { ascending: false })
 
-    // Filtrar por tipo se especificado
-    if (tipo) {
-      query = query.eq("tipo_consulta", tipo.toUpperCase())
+    if (agendamentosError) {
+      console.error("❌ [API] Erro ao buscar agendamentos:", agendamentosError)
+      throw agendamentosError
     }
 
-    const { data: agendamentos, error: agendamentosError } = await query
-    if (agendamentosError) throw agendamentosError
+    console.log(`✅ [API] ${agendamentos?.length || 0} agendamentos encontrados`)
 
-    // Separar leads e agendamentos reais
-    const leads = agendamentos?.filter(item => item.status === 'LEAD') || []
-    const agendamentosReais = agendamentos?.filter(item => item.status !== 'LEAD') || []
+    // Buscar leads/questionários seria feito aqui se a tabela existisse
 
-    // Transformar dados para compatibilidade com o frontend
-    const leadsFormatados = agendamentos?.map(item => ({
-      id: item.id,
-      nome: item.nome_paciente,
-      email: item.email_paciente,
-      telefone: item.telefone_paciente,
-      qualificacao: item.qualificacao_lead,
-      created_at: item.created_at,
-      tipo: item.tipo_consulta,
-      agendamento: item.status !== 'LEAD' ? {
-        id: item.id,
-        data_agendamento: item.data_agendamento,
-        horario_agendamento: item.horario_agendamento,
-        status: item.status,
-        tipo_consulta: item.tipo_consulta,
-        observacoes: item.observacoes,
-        nome_paciente: item.nome_paciente,
-        email_paciente: item.email_paciente,
-        telefone_paciente: item.telefone_paciente,
-        valor_pago: item.valor_pago,
-        payment_id: item.payment_id,
-        payment_status: item.payment_status
-      } : null
-    })) || []
+    // Calcular estatísticas
+    const hoje = new Date().toISOString().split("T")[0]
+    const agendamentosHoje = agendamentos?.filter((a) => a.data_agendamento === hoje) || []
+    const agendamentosConfirmados = agendamentos?.filter((a) => ["CONFIRMADO", "PAGO"].includes(a.status)) || []
+    const agendamentosRealizados = agendamentos?.filter((a) => a.status === "REALIZADO") || []
 
-    // Se a requisição for para um tipo específico (ex: 'pago')
-    if (tipo) {
-      const leadsFiltrados = leadsFormatados.filter(l => l.tipo?.toLowerCase() === tipo.toLowerCase())
-      const totalLeads = leadsFiltrados.length
-      const leadsQualificados = leadsFiltrados.filter(l => l.qualificacao === "qualificado").length
-      const leadsComAgendamento = leadsFiltrados.filter(l => l.agendamento).length
-      const agendamentosRealizados = leadsFiltrados.filter(l => l.agendamento?.status?.toUpperCase() === "REALIZADO").length
+    // Calcular faturamento (apenas agendamentos pagos/realizados)
+    const faturamento =
+      agendamentos
+        ?.filter((a) => ["PAGO", "REALIZADO"].includes(a.status))
+        ?.reduce((total, a) => total + (a.valor_consulta || 0), 0) || 0
 
-      return NextResponse.json({
-        totalLeads,
-        leadsQualificados,
-        leadsComAgendamento,
-        agendamentosRealizados,
-        taxaQualificacao: totalLeads > 0 ? (leadsQualificados / totalLeads) * 100 : 0,
-        taxaAgendamento: leadsQualificados > 0 ? (leadsComAgendamento / leadsQualificados) * 100 : 0,
-        leads: leadsFiltrados,
-      })
+    // Atividades recentes (últimos 10 agendamentos)
+    const atividadesRecentes =
+      agendamentos?.slice(0, 10).map((a) => ({
+        id: a.id,
+        tipo: "agendamento",
+        descricao: `Agendamento de ${a.nome_paciente}`,
+        data: a.created_at,
+        status: a.status,
+      })) || []
+
+    const dashboardData = {
+      estatisticas: {
+        totalAgendamentos: agendamentos?.length || 0,
+        agendamentosHoje: agendamentosHoje.length,
+        agendamentosConfirmados: agendamentosConfirmados.length,
+        agendamentosRealizados: agendamentosRealizados.length,
+        faturamentoMensal: faturamento,
+      },
+      agendamentosRecentes: agendamentos?.slice(0, 5) || [],
+      atividadesRecentes,
+      proximosAgendamentos:
+        agendamentos
+          ?.filter((a) => a.data_agendamento >= hoje)
+          ?.sort((a, b) => a.data_agendamento.localeCompare(b.data_agendamento))
+          ?.slice(0, 5) || [],
+      totalLeads: 0, // Would come from questionarios table
+      leadsPagos: 0,
+      faturamentoMes: faturamento,
+      agendamentos: agendamentos || [],
+      stats: {
+        total: agendamentos?.length || 0,
+        agendados: agendamentos?.filter((a) => a.status === "AGENDADO").length || 0,
+        confirmados: agendamentosConfirmados.length,
+        realizados: agendamentosRealizados.length,
+        cancelados: agendamentos?.filter((a) => a.status === "CANCELADO").length || 0,
+      },
     }
 
-    // Resposta geral para o dashboard
-    const hoje = new Date().toISOString().split('T')[0]
-    const agendamentosHoje = agendamentosReais.filter(a => a.data_agendamento === hoje).length
-
-    const proximaSemanaDatas = Array.from({ length: 7 }, (_, i) => {
-      const data = new Date()
-      data.setDate(data.getDate() + i)
-      return data.toISOString().split('T')[0]
+    console.log("✅ [API] Dashboard data preparado:", {
+      totalAgendamentos: dashboardData.estatisticas.totalAgendamentos,
+      agendamentosHoje: dashboardData.estatisticas.agendamentosHoje,
+      faturamento: dashboardData.estatisticas.faturamentoMensal,
     })
-
-    const proximosAgendamentos = agendamentosReais
-      .filter(a => 
-        proximaSemanaDatas.includes(a.data_agendamento) && 
-        a.status?.toUpperCase() !== 'CANCELADO' && 
-        a.status?.toUpperCase() !== 'REALIZADO'
-      )
-      .sort((a, b) => new Date(a.data_agendamento).getTime() - new Date(b.data_agendamento).getTime())
-      .slice(0, 5)
-
-    const totalLeadsGeral = agendamentos?.length || 0
-    const leadsQualificadosGeral = agendamentos?.filter(l => l.qualificacao_lead === 'qualificado').length || 0
-    const leadsComAgendamentoGeral = agendamentosReais.length
-    const agendamentosRealizadosGeral = agendamentosReais.filter(a => a.status?.toUpperCase() === 'REALIZADO').length
 
     return NextResponse.json({
-      totalQuestionarios: totalLeadsGeral,
-      totalAgendamentos: leadsComAgendamentoGeral,
-      agendamentosHoje,
-      proximosAgendamentos,
-      ultimosLeads: leadsFormatados.slice(0, 10),
-      taxaConversao: {
-        qualificacao: totalLeadsGeral > 0 ? (leadsQualificadosGeral / totalLeadsGeral) * 100 : 0,
-        agendamento: leadsQualificadosGeral > 0 ? (leadsComAgendamentoGeral / leadsQualificadosGeral) * 100 : 0,
-        realizacao: leadsComAgendamentoGeral > 0 ? (agendamentosRealizadosGeral / leadsComAgendamentoGeral) * 100 : 0,
-      },
+      success: true,
+      data: dashboardData,
+      ...dashboardData,
     })
-
-  } catch (error: any) {
-    console.error("Erro na API dashboard-data:", error)
-    return NextResponse.json({ error: "Erro interno do servidor", details: error.message }, { status: 500 })
+  } catch (error) {
+    console.error("❌ [API] Erro ao buscar dados do dashboard:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Erro interno do servidor",
+        details: error instanceof Error ? error.message : "Erro desconhecido",
+      },
+      { status: 500 },
+    )
   }
 }

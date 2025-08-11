@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     console.log("🎯 Webhook recebeu uma requisição")
     console.log("🕐 Timestamp:", new Date().toISOString())
@@ -86,80 +86,83 @@ export async function POST(request: Request) {
 
     console.log("📊 Log estruturado:", JSON.stringify(logData, null, 2))
 
-    // Aqui você pode processar os dados antes de enviá-los para o CRM
-    // Por exemplo, formatar os dados, adicionar informações adicionais, etc.
+    // URL do webhook do Make
+    const webhookUrl = "https://hook.us1.make.com/ibvli2ncgm8ii128jc5cknc6k8eixb3k"
 
-    // Exemplo de integração com um CRM (substitua pela sua integração real)
-    const crmUrl = process.env.CRM_WEBHOOK_URL
-
-    if (crmUrl) {
-      try {
-        // Preparar dados para o CRM
-        const crmData = {
+    try {
+      // Preparar dados para o Make
+      const makeData = {
+        tipo_evento: "QUESTIONARIO_RESPONDIDO",
+        dados_contato: {
           nome,
           email,
           telefone,
           idade,
-          respostas: respostas,
-          pontuacao: analise?.pontuacaoTotal || leadData.pontuacao_total,
+        },
+        analise: {
           categoria: analise?.categoria || leadData.categoria_sintomas,
-          qualificacao: qualificacaoLead?.categoria || leadData.categoria_lead || leadData.qualificacao_lead,
-          prioridade: qualificacaoLead?.prioridade || leadData.prioridade,
-          valor_disposto_pagar: valorDispostoPagar,
+          pontuacao_total: analise?.pontuacaoTotal || leadData.pontuacao_total,
           sintomas: analise?.sintomas
             ? analise.sintomas.map((s: any) => s.nome).join(", ")
             : leadData.sintomas_identificados
               ? leadData.sintomas_identificados.map((s: any) => s.nome).join(", ")
               : "",
+        },
+        qualificacao: {
+          categoria: qualificacaoLead?.categoria || leadData.categoria_lead || leadData.qualificacao_lead,
+          prioridade: qualificacaoLead?.prioridade || leadData.prioridade,
+          valor_disposto_pagar: valorDispostoPagar,
+        },
+        respostas: respostas,
+        metadados: {
           timestamp: dados.timestamp || new Date().toISOString(),
           origem: leadData.origem || "questionario-menopausa",
           tipo_questionario: leadData.tipo_questionario || "ORGANICO",
           versao_questionario: leadData.versao_questionario || "3.4",
-        }
+          user_agent: request.headers.get("user-agent"),
+          ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip"),
+        },
+      }
 
-        console.log("📤 Enviando dados para CRM:", JSON.stringify(crmData, null, 2))
+      console.log("📤 Enviando dados para Make:", JSON.stringify(makeData, null, 2))
 
-        // Enviar dados para o CRM com retry logic
-        let crmResponse
-        let attempts = 0
-        const maxAttempts = 3
+      // Enviar dados para o Make com retry logic
+      let makeResponse
+      let attempts = 0
+      const maxAttempts = 3
 
-        while (attempts < maxAttempts) {
-          try {
-            crmResponse = await fetch(crmUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${process.env.CRM_API_KEY || ""}`,
-              },
-              body: JSON.stringify(crmData),
-            })
+      while (attempts < maxAttempts) {
+        try {
+          makeResponse = await fetch(webhookUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(makeData),
+          })
 
-            if (crmResponse.ok) {
-              console.log("✅ Dados enviados com sucesso para o CRM")
-              break
-            } else {
-              throw new Error(`HTTP ${crmResponse.status}: ${await crmResponse.text()}`)
-            }
-          } catch (error) {
-            attempts++
-            console.error(`❌ Tentativa ${attempts} falhou:`, error)
+          if (makeResponse.ok) {
+            console.log("✅ Dados enviados com sucesso para Make")
+            break
+          } else {
+            throw new Error(`HTTP ${makeResponse.status}: ${await makeResponse.text()}`)
+          }
+        } catch (error) {
+          attempts++
+          console.error(`❌ Tentativa ${attempts} falhou:`, error)
 
-            if (attempts >= maxAttempts) {
-              console.error("❌ Todas as tentativas de envio para CRM falharam")
-              // Ainda retornamos sucesso para o cliente, mas logamos o erro
-            } else {
-              // Aguardar antes da próxima tentativa
-              await new Promise((resolve) => setTimeout(resolve, 1000 * attempts))
-            }
+          if (attempts >= maxAttempts) {
+            console.error("❌ Todas as tentativas de envio para Make falharam")
+            // Ainda retornamos sucesso para o cliente, mas logamos o erro
+          } else {
+            // Aguardar antes da próxima tentativa
+            await new Promise((resolve) => setTimeout(resolve, 1000 * attempts))
           }
         }
-      } catch (error) {
-        console.error("❌ Erro na integração com CRM:", error)
-        // Ainda retornamos sucesso para o cliente, mas logamos o erro
       }
-    } else {
-      console.log("⚠️ URL do CRM não configurada, dados não foram encaminhados")
+    } catch (error) {
+      console.error("❌ Erro na integração com Make:", error)
+      // Ainda retornamos sucesso para o cliente, mas logamos o erro
     }
 
     // Simular processamento bem-sucedido
